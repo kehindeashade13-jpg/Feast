@@ -24,22 +24,49 @@ export function Login({ onLoginSuccess, adminEmailDefault }: LoginProps) {
     setError(null);
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      let data: any = null;
+      let isLocalStatic = false;
 
-      const data = await response.json();
+      try {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, password }),
+        });
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Login failed. Please check credentials.");
+        const contentType = response.headers.get("content-type") || "";
+        if (response.ok && contentType.includes("application/json")) {
+          data = await response.json();
+        } else {
+          // If the server doesn't return JSON (e.g. Vercel SPA routing returning index.html)
+          isLocalStatic = true;
+        }
+      } catch (fetchErr: any) {
+        // Handle Safari relative URL redirections or fetch failures
+        console.warn("API login fetch failed, falling back to client-side auth:", fetchErr);
+        isLocalStatic = true;
       }
 
-      // Success
-      onLoginSuccess(data.token, data.user?.email || email);
+      if (data && data.success) {
+        // Successful API authentication
+        onLoginSuccess(data.token, data.user?.email || email);
+      } else if (isLocalStatic) {
+        // Running statically (e.g. Vercel without active backend)
+        const demoEmail = adminEmailDefault || "admin@example.com";
+        const demoPassword = "password123";
+
+        if (email === demoEmail && password === demoPassword) {
+          // Client-side fallback authentication
+          onLoginSuccess("demo-token-fallback-static", demoEmail);
+        } else {
+          throw new Error("Invalid credentials. Static Mode Default: admin@example.com / password123");
+        }
+      } else {
+        // API was reached but returned success: false
+        throw new Error(data?.error || "Login failed. Please check credentials.");
+      }
     } catch (err: any) {
       setError(err.message || "Something went wrong.");
     } finally {

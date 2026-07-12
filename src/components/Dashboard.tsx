@@ -202,6 +202,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const [dbError, setDbError] = useState<string | null>(null);
   const [isFallback, setIsFallback] = useState(false);
+  const [isLocalStaticMode, setIsLocalStaticMode] = useState(false);
   
   // App Config (Supabase status)
   const [config, setConfig] = useState<AppConfig>({
@@ -222,27 +223,126 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
     image_url: ""
   });
 
+  const getLocalSeedProducts = (): Product[] => [
+    {
+      id: "prod-1",
+      name: "Minimalist Mechanical Keyboard",
+      description: "A tenkeyless layout mechanical keyboard with tactile brown switches, sturdy aluminum frame, and warm-white LED backlighting.",
+      price: 150000.00,
+      category: "Electronics",
+      image_url: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&q=80&w=800",
+      stock: 15,
+      created_at: new Date().toISOString()
+    },
+    {
+      id: "prod-2",
+      name: "Classic Leather Journal",
+      description: "Handcrafted genuine full-grain leather journal with 200 cream-colored lined pages, perfect for writing and planning.",
+      price: 25000.00,
+      category: "Stationery",
+      image_url: "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=800",
+      stock: 45,
+      created_at: new Date().toISOString()
+    },
+    {
+      id: "prod-3",
+      name: "Ceramic Pour-Over Coffee Dripper",
+      description: "Artisanal speckled ceramic coffee dripper designed to hold temperature and brew the perfect balanced, flavorful cup of coffee.",
+      price: 35000.00,
+      category: "Kitchen",
+      image_url: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&q=80&w=800",
+      stock: 20,
+      created_at: new Date().toISOString()
+    },
+    {
+      id: "prod-4",
+      name: "Matte Black Travel Tumbler",
+      description: "Double-wall vacuum-insulated stainless steel travel mug that keeps your hot drinks hot for 12 hours and cold drinks cold for 24 hours.",
+      price: 30000.00,
+      category: "Lifestyle",
+      image_url: "https://images.unsplash.com/photo-1577937927133-66ef06acdf18?auto=format&fit=crop&q=80&w=800",
+      stock: 60,
+      created_at: new Date().toISOString()
+    },
+    {
+      id: "prod-5",
+      name: "Ergonomic High-Back Office Chair",
+      description: "Premium desk chair featuring adjustable adaptive lumbar support, 3D multi-directional armrests, and breathable high-tension mesh back.",
+      price: 240000.00,
+      category: "Furniture",
+      image_url: "https://images.unsplash.com/photo-1505797149-43b0069ec26b?auto=format&fit=crop&q=80&w=800",
+      stock: 8,
+      created_at: new Date().toISOString()
+    }
+  ];
+
   // Fetch initial data
   const fetchData = async () => {
     setLoading(true);
     setDbError(null);
     try {
-      // Fetch Config
-      const configRes = await fetch("/api/config");
-      const configData = await configRes.json();
-      setConfig(configData);
+      let isLocalStatic = false;
 
-      // Fetch Products
-      const productsRes = await fetch("/api/products");
-      const productsData = await productsRes.json();
-      setProducts(productsData.products || []);
-      
-      if (productsData.isFallback && productsData.error) {
-        setDbError(productsData.error);
-        setIsFallback(true);
-      } else {
-        setIsFallback(false);
+      // 1. Fetch Config
+      try {
+        const configRes = await fetch("/api/config");
+        const contentType = configRes.headers.get("content-type") || "";
+        if (configRes.ok && contentType.includes("application/json")) {
+          const configData = await configRes.json();
+          setConfig(configData);
+        } else {
+          isLocalStatic = true;
+        }
+      } catch (err) {
+        isLocalStatic = true;
       }
+
+      // 2. Fetch Products
+      let loadedProducts: Product[] = [];
+      if (!isLocalStatic) {
+        try {
+          const productsRes = await fetch("/api/products");
+          const contentType = productsRes.headers.get("content-type") || "";
+          if (productsRes.ok && contentType.includes("application/json")) {
+            const productsData = await productsRes.json();
+            loadedProducts = productsData.products || [];
+            
+            if (productsData.isFallback && productsData.error) {
+              setDbError(productsData.error);
+              setIsFallback(true);
+            } else {
+              setIsFallback(false);
+            }
+          } else {
+            isLocalStatic = true;
+          }
+        } catch (err) {
+          isLocalStatic = true;
+        }
+      }
+
+      // If we are running statically (no active JSON backend, e.g. on Vercel)
+      if (isLocalStatic) {
+        setIsLocalStaticMode(true);
+        setIsFallback(true);
+        setDbError("Running in client-side Static Mode. All product changes are saved securely to Local Storage.");
+        
+        const localProductsStr = localStorage.getItem("local_products");
+        if (localProductsStr) {
+          try {
+            loadedProducts = JSON.parse(localProductsStr);
+          } catch (e) {
+            loadedProducts = getLocalSeedProducts();
+          }
+        } else {
+          loadedProducts = getLocalSeedProducts();
+          localStorage.setItem("local_products", JSON.stringify(loadedProducts));
+        }
+      } else {
+        setIsLocalStaticMode(false);
+      }
+
+      setProducts(loadedProducts);
     } catch (error: any) {
       console.error("Error loading dashboard data:", error);
       showToast("Failed to fetch database products.", "error");
@@ -321,6 +421,26 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
       return;
     }
 
+    if (isLocalStaticMode) {
+      const newProduct: Product = {
+        id: `prod-${Date.now()}`,
+        name: formData.name,
+        description: formData.description,
+        price: Number(formData.price),
+        stock: Number(formData.stock) || 0,
+        category: formData.category,
+        image_url: formData.image_url || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=800",
+        created_at: new Date().toISOString()
+      };
+      const updatedProducts = [newProduct, ...products];
+      setProducts(updatedProducts);
+      localStorage.setItem("local_products", JSON.stringify(updatedProducts));
+      showToast(`Product "${formData.name}" added successfully (Local)!`, "success");
+      resetForm();
+      setActiveTab("catalog");
+      return;
+    }
+
     try {
       const response = await fetch("/api/products", {
         method: "POST",
@@ -335,14 +455,19 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
         })
       });
 
-      const data = await response.json();
-      if (response.ok && data.success) {
-        setProducts(prev => [data.product, ...prev]);
-        showToast(`Product "${formData.name}" added successfully!`, "success");
-        resetForm();
-        setActiveTab("catalog"); // switch back to catalog
+      const contentType = response.headers.get("content-type") || "";
+      if (response.ok && contentType.includes("application/json")) {
+        const data = await response.json();
+        if (data.success) {
+          setProducts(prev => [data.product, ...prev]);
+          showToast(`Product "${formData.name}" added successfully!`, "success");
+          resetForm();
+          setActiveTab("catalog"); // switch back to catalog
+        } else {
+          throw new Error(data.error || "Failed to add product.");
+        }
       } else {
-        throw new Error(data.error || "Failed to add product.");
+        throw new Error("Server did not return JSON. Trying switching to Static Mode.");
       }
     } catch (error: any) {
       showToast(error.message, "error");
@@ -353,6 +478,28 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct) return;
+
+    if (isLocalStaticMode) {
+      const updatedProducts = products.map(p => {
+        if (p.id === editingProduct.id) {
+          return {
+            ...p,
+            name: formData.name,
+            description: formData.description,
+            price: Number(formData.price),
+            stock: Number(formData.stock) || 0,
+            category: formData.category,
+            image_url: formData.image_url
+          };
+        }
+        return p;
+      });
+      setProducts(updatedProducts);
+      localStorage.setItem("local_products", JSON.stringify(updatedProducts));
+      showToast(`Product updated successfully (Local)!`, "success");
+      handleCloseEdit();
+      return;
+    }
 
     try {
       const response = await fetch(`/api/products/${editingProduct.id}`, {
@@ -368,13 +515,18 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
         })
       });
 
-      const data = await response.json();
-      if (response.ok && data.success) {
-        setProducts(prev => prev.map(p => p.id === editingProduct.id ? data.product : p));
-        showToast(`Product updated successfully!`, "success");
-        handleCloseEdit();
+      const contentType = response.headers.get("content-type") || "";
+      if (response.ok && contentType.includes("application/json")) {
+        const data = await response.json();
+        if (data.success) {
+          setProducts(prev => prev.map(p => p.id === editingProduct.id ? data.product : p));
+          showToast(`Product updated successfully!`, "success");
+          handleCloseEdit();
+        } else {
+          throw new Error(data.error || "Failed to update product.");
+        }
       } else {
-        throw new Error(data.error || "Failed to update product.");
+        throw new Error("Server did not return JSON.");
       }
     } catch (error: any) {
       showToast(error.message, "error");
@@ -387,17 +539,30 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
     const { id, name } = productToDelete;
     setProductToDelete(null); // Close confirmation modal
 
+    if (isLocalStaticMode) {
+      const updatedProducts = products.filter(p => p.id !== id);
+      setProducts(updatedProducts);
+      localStorage.setItem("local_products", JSON.stringify(updatedProducts));
+      showToast(`Product "${name}" deleted successfully (Local)!`, "info");
+      return;
+    }
+
     try {
       const response = await fetch(`/api/products/${id}`, {
         method: "DELETE"
       });
 
-      const data = await response.json();
-      if (response.ok && data.success) {
-        setProducts(prev => prev.filter(p => p.id !== id));
-        showToast(`Product "${name}" deleted successfully!`, "info");
+      const contentType = response.headers.get("content-type") || "";
+      if (response.ok && contentType.includes("application/json")) {
+        const data = await response.json();
+        if (data.success) {
+          setProducts(prev => prev.filter(p => p.id !== id));
+          showToast(`Product "${name}" deleted successfully!`, "info");
+        } else {
+          throw new Error(data.error || "Failed to delete product.");
+        }
       } else {
-        throw new Error(data.error || "Failed to delete product.");
+        throw new Error("Server did not return JSON.");
       }
     } catch (error: any) {
       showToast(error.message, "error");
