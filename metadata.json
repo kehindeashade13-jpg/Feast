@@ -1,0 +1,6 @@
+{
+  "name": "E-commerce Admin Panel",
+  "description": "A sleek, minimal, and fully-featured E-commerce Admin Panel for managing products, featuring an elegant login interface and a server-side proxy backend with support for Supabase.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
