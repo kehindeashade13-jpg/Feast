@@ -161,7 +161,7 @@ app.get("/api/config", (req, res) => {
   res.json({
     isSupabaseConfigured,
     supabaseUrl: isSupabaseConfigured ? supabaseUrl : null,
-    adminEmail: process.env.ADMIN_EMAIL || "kehindeashade13@gmail.com"
+    adminEmail: process.env.ADMIN_EMAIL || "example@gmail.com"
   });
 });
 
@@ -179,8 +179,8 @@ app.post("/api/auth/login", async (req, res) => {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         // If Supabase authentication fails, fall back to admin env check just in case they are developing with a local account
-        const fallbackEmail = process.env.ADMIN_EMAIL || "kehindeashade13@gmail.com";
-        const fallbackPassword = process.env.ADMIN_PASSWORD || "246810";
+        const fallbackEmail = process.env.ADMIN_EMAIL || "example@gmail.com";
+        const fallbackPassword = process.env.ADMIN_PASSWORD || "password123";
         if (email === fallbackEmail && password === fallbackPassword) {
           return res.json({
             success: true,
@@ -203,8 +203,8 @@ app.post("/api/auth/login", async (req, res) => {
   }
 
   // Fallback / Demo auth
-  const adminEmail = process.env.ADMIN_EMAIL || "kehindeashade13@gmail.com";
-  const adminPassword = process.env.ADMIN_PASSWORD || "246810";
+  const adminEmail = process.env.ADMIN_EMAIL || "example@gmail.com";
+  const adminPassword = process.env.ADMIN_PASSWORD || "password123";
 
   if (email === adminEmail && password === adminPassword) {
     return res.json({
