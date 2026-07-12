@@ -13,20 +13,67 @@ const PORT = 3000;
 app.use(express.json());
 
 // Supabase Configuration
-const supabaseUrl = process.env.SUPABASE_URL || "";
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || "";
-const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+function cleanEnvValue(value: string | undefined): string {
+  if (!value) return "";
+  let cleaned = value.trim();
+  // Remove wrapping single/double quotes if present
+  if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || 
+      (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+    cleaned = cleaned.slice(1, -1).trim();
+  }
+  return cleaned;
+}
 
+const rawSupabaseUrl = cleanEnvValue(process.env.SUPABASE_URL);
+const rawSupabaseAnonKey = cleanEnvValue(process.env.SUPABASE_ANON_KEY);
+
+const placeholders = [
+  "your-project-url",
+  "your-supabase-url",
+  "your_supabase_url",
+  "your-project-anon-or-service-role-key",
+  "your-supabase-anon-key",
+  "your_supabase_anon_key",
+  "my_supabase_url",
+  "my_supabase_anon_key",
+  "placeholder"
+];
+
+const isPlaceholderValue = (val: string) => {
+  const v = val.toLowerCase();
+  return placeholders.some(p => v.includes(p));
+};
+
+// Check if the anon key is a valid JWT (has 3 parts separated by dots)
+const isValidJwt = (token: string) => {
+  if (!token) return false;
+  const parts = token.split('.');
+  return parts.length === 3;
+};
+
+const isSupabaseConfigured = Boolean(
+  rawSupabaseUrl && 
+  rawSupabaseAnonKey && 
+  !isPlaceholderValue(rawSupabaseUrl) && 
+  !isPlaceholderValue(rawSupabaseAnonKey) &&
+  isValidJwt(rawSupabaseAnonKey)
+);
+
+let supabaseUrl = "";
+let supabaseAnonKey = "";
 let supabase: any = null;
+
 if (isSupabaseConfigured) {
+  supabaseUrl = rawSupabaseUrl;
+  supabaseAnonKey = rawSupabaseAnonKey;
   try {
     supabase = createClient(supabaseUrl, supabaseAnonKey);
-    console.log("Supabase client initialized successfully.");
+    console.log("Supabase client initialized successfully with valid keys.");
   } catch (error) {
     console.error("Failed to initialize Supabase client:", error);
   }
 } else {
-  console.log("Supabase is not configured. Running in Local Mock Database mode.");
+  console.log("Supabase is not configured or configured with invalid keys/placeholders. Running in Local Mock Database mode.");
 }
 
 // Local Fallback Database Setup
