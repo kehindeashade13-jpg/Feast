@@ -9,7 +9,7 @@ export default function App() {
   const [config, setConfig] = useState<AppConfig>({
     isSupabaseConfigured: false,
     supabaseUrl: null,
-    adminEmail: "admin@example.com"
+    adminEmail: "kehindeashade13@gmail.com"
   });
 
   // Check for persistent session on load

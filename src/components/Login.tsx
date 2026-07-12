@@ -54,14 +54,14 @@ export function Login({ onLoginSuccess, adminEmailDefault }: LoginProps) {
         onLoginSuccess(data.token, data.user?.email || email);
       } else if (isLocalStatic) {
         // Running statically (e.g. Vercel without active backend)
-        const demoEmail = adminEmailDefault || "admin@example.com";
-        const demoPassword = "password123";
+        const demoEmail = adminEmailDefault || "kehindeashade13@gmail.com";
+        const demoPassword = "246810";
 
         if (email === demoEmail && password === demoPassword) {
           // Client-side fallback authentication
           onLoginSuccess("demo-token-fallback-static", demoEmail);
         } else {
-          throw new Error("Invalid credentials. Static Mode Default: admin@example.com / password123");
+          throw new Error(`Invalid credentials. Static Mode Default: ${demoEmail} / ${demoPassword}`);
         }
       } else {
         // API was reached but returned success: false
@@ -75,8 +75,8 @@ export function Login({ onLoginSuccess, adminEmailDefault }: LoginProps) {
   };
 
   const handleFillDemo = () => {
-    setEmail(adminEmailDefault || "admin@example.com");
-    setPassword("password123");
+    setEmail(adminEmailDefault || "kehindeashade13@gmail.com");
+    setPassword("246810");
     setError(null);
   };
 
@@ -135,7 +135,7 @@ export function Login({ onLoginSuccess, adminEmailDefault }: LoginProps) {
                   setEmail(e.target.value);
                   setError(null);
                 }}
-                placeholder="admin@example.com"
+                placeholder="kehindeashade13@gmail.com"
                 className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 hover:bg-neutral-100/70 focus:bg-white text-sm text-neutral-800 rounded-xl border border-neutral-200 focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 transition-all outline-none"
               />
             </div>
