@@ -54,14 +54,17 @@ export function Login({ onLoginSuccess, adminEmailDefault }: LoginProps) {
         onLoginSuccess(data.token, data.user?.email || email);
       } else if (isLocalStatic) {
         // Running statically (e.g. Vercel without active backend)
-        const demoEmail = adminEmailDefault || "example@gmail.com";
+        const demoEmail = "example@gmail.com";
         const demoPassword = "password123";
 
-        if (email === demoEmail && password === demoPassword) {
+        if (
+          (email === demoEmail && password === demoPassword) ||
+          (adminEmailDefault && email === adminEmailDefault && password === "password123")
+        ) {
           // Client-side fallback authentication
-          onLoginSuccess("demo-token-fallback-static", demoEmail);
+          onLoginSuccess("demo-token-fallback-static", email);
         } else {
-          throw new Error(`Invalid credentials. Static Mode Default: ${demoEmail} / ${demoPassword}`);
+          throw new Error(`Invalid credentials. Please use: ${demoEmail} / ${demoPassword} or click Autofill.`);
         }
       } else {
         // API was reached but returned success: false

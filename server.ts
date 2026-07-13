@@ -181,11 +181,12 @@ app.post("/api/auth/login", async (req, res) => {
         // If Supabase authentication fails, fall back to admin env check just in case they are developing with a local account
         const fallbackEmail = process.env.ADMIN_EMAIL || "example@gmail.com";
         const fallbackPassword = process.env.ADMIN_PASSWORD || "password123";
+
         if (email === fallbackEmail && password === fallbackPassword) {
           return res.json({
             success: true,
             token: "demo-token-fallback",
-            user: { email: fallbackEmail },
+            user: { email },
             notice: "Supabase auth failed, logged in using local admin fallback."
           });
         }
@@ -210,7 +211,7 @@ app.post("/api/auth/login", async (req, res) => {
     return res.json({
       success: true,
       token: "demo-token-12345",
-      user: { email: adminEmail },
+      user: { email },
       notice: "Logged in via Mock Mode. Configure SUPABASE_URL & SUPABASE_ANON_KEY to use your live Supabase database."
     });
   } else {
