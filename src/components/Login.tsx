@@ -26,7 +26,8 @@ export function Login({ onLoginSuccess, adminEmailDefault }: LoginProps) {
 
     try {
       let data: any = null;
-      let isLocalStatic = false;
+      let fetchErrorOccurred = false;
+      let fetchErrorMessage = "";
 
       try {
         const response = await fetch("/api/auth/login", {
@@ -41,35 +42,24 @@ export function Login({ onLoginSuccess, adminEmailDefault }: LoginProps) {
         if (contentType.includes("application/json")) {
           data = await response.json();
         } else {
-          // If the server doesn't return JSON (e.g. Vercel SPA routing returning index.html)
-          isLocalStatic = true;
+          const responseText = await response.text();
+          throw new Error(`Server returned non-JSON response (Status ${response.status}): ${responseText.slice(0, 100)}`);
         }
       } catch (fetchErr: any) {
-        // Handle Safari relative URL redirections or fetch failures
-        console.warn("API login fetch failed, falling back to client-side auth:", fetchErr);
-        isLocalStatic = true;
+        console.warn("API login fetch failed:", fetchErr);
+        fetchErrorOccurred = true;
+        fetchErrorMessage = fetchErr.message || String(fetchErr);
       }
 
       if (data && data.success) {
         // Successful API authentication
         onLoginSuccess(data.token, data.user?.email || email);
-      } else if (isLocalStatic) {
-        // Running statically (e.g. Vercel without active backend)
-        const demoEmail = "example@gmail.com";
-        const demoPassword = "password123";
-
-        if (
-          (email === demoEmail && password === demoPassword) ||
-          (adminEmailDefault && email === adminEmailDefault && password === "password123")
-        ) {
-          // Client-side fallback authentication
-          onLoginSuccess("demo-token-fallback-static", email);
-        } else {
-          throw new Error(`Invalid credentials. Please use: ${demoEmail} / ${demoPassword} or click Autofill.`);
-        }
+      } else if (fetchErrorOccurred) {
+        // If there was a network/connection error to the API, let the user know
+        throw new Error(`Connection to server failed: ${fetchErrorMessage}. Please check if the backend is running.`);
       } else {
         // API was reached but returned success: false
-        throw new Error(data?.error || "Login failed. Please check credentials.");
+        throw new Error(data?.error || "Login failed. Please check your email and password.");
       }
     } catch (err: any) {
       setError(err.message || "Something went wrong.");
