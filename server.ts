@@ -442,6 +442,11 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    console.log("Environment variables status on startup:");
+    console.log("- ADMIN_EMAIL:", process.env.ADMIN_EMAIL ? `DEFINED (length: ${process.env.ADMIN_EMAIL.length})` : "UNDEFINED");
+    console.log("- ADMIN_PASSWORD:", process.env.ADMIN_PASSWORD ? `DEFINED (length: ${process.env.ADMIN_PASSWORD.length})` : "UNDEFINED");
+    console.log("- SUPABASE_URL:", process.env.SUPABASE_URL ? `DEFINED (length: ${process.env.SUPABASE_URL.length})` : "UNDEFINED");
+    console.log("- SUPABASE_ANON_KEY:", process.env.SUPABASE_ANON_KEY ? `DEFINED (length: ${process.env.SUPABASE_ANON_KEY.length})` : "UNDEFINED");
   });
 }
 
