@@ -37,7 +37,7 @@ export function Login({ onLoginSuccess, adminEmailDefault }: LoginProps) {
         });
 
         const contentType = response.headers.get("content-type") || "";
-        if (response.ok && contentType.includes("application/json")) {
+        if (contentType.includes("application/json")) {
           data = await response.json();
         } else {
           // If the server doesn't return JSON (e.g. Vercel SPA routing returning index.html)

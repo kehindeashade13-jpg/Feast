@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { createServer as createViteServer } from "vite";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 
@@ -427,6 +426,7 @@ app.delete("/api/products/:id", async (req, res) => {
 // Main Setup (Express + Vite)
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
