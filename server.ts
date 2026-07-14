@@ -157,10 +157,11 @@ function writeLocalProducts(products: any[]) {
 
 // Get configuration status
 app.get("/api/config", (req, res) => {
+  const cleanedAdminEmail = cleanEnvValue(process.env.ADMIN_EMAIL) || "example@gmail.com";
   res.json({
     isSupabaseConfigured,
     supabaseUrl: isSupabaseConfigured ? supabaseUrl : null,
-    adminEmail: process.env.ADMIN_EMAIL || "example@gmail.com"
+    adminEmail: cleanedAdminEmail
   });
 });
 
@@ -172,16 +173,16 @@ app.post("/api/auth/login", async (req, res) => {
     return res.status(400).json({ success: false, error: "Email and password are required." });
   }
 
+  const cleanedAdminEmail = cleanEnvValue(process.env.ADMIN_EMAIL) || "example@gmail.com";
+  const cleanedAdminPassword = cleanEnvValue(process.env.ADMIN_PASSWORD) || "password123";
+
   // If Supabase is configured, authenticate against Supabase first
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         // If Supabase authentication fails, fall back to admin env check just in case they are developing with a local account
-        const fallbackEmail = process.env.ADMIN_EMAIL || "example@gmail.com";
-        const fallbackPassword = process.env.ADMIN_PASSWORD || "password123";
-
-        if (email === fallbackEmail && password === fallbackPassword) {
+        if (email === cleanedAdminEmail && password === cleanedAdminPassword) {
           return res.json({
             success: true,
             token: "demo-token-fallback",
@@ -203,10 +204,7 @@ app.post("/api/auth/login", async (req, res) => {
   }
 
   // Fallback / Demo auth
-  const adminEmail = process.env.ADMIN_EMAIL || "example@gmail.com";
-  const adminPassword = process.env.ADMIN_PASSWORD || "password123";
-
-  if (email === adminEmail && password === adminPassword) {
+  if (email === cleanedAdminEmail && password === cleanedAdminPassword) {
     return res.json({
       success: true,
       token: "demo-token-12345",
@@ -216,7 +214,7 @@ app.post("/api/auth/login", async (req, res) => {
   } else {
     return res.status(401).json({
       success: false,
-      error: `Invalid email or password. Default is: ${adminEmail} / ${adminPassword}`
+      error: `Invalid email or password. Default is: ${cleanedAdminEmail} / ${cleanedAdminPassword}`
     });
   }
 });
