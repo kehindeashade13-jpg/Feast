@@ -450,6 +450,6 @@ async function startServer() {
   });
 }
 
-if (!process.env.VERCEL && !process.env.NETLIFY) {
+if (!process.env.VERCEL && !process.env.NETLIFY && !process.env.LAMBDA_TASK_ROOT && !process.env.AWS_LAMBDA_FUNCTION_NAME && !process.env.NETLIFY_IMAGES_CDN_DOMAIN) {
   startServer();
 }
