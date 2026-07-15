@@ -65,6 +65,19 @@ export const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Safe parser middleware to handle cases where request body might be a raw string
+app.use((req, res, next) => {
+  if (req.body && typeof req.body === "string") {
+    try {
+      req.body = JSON.parse(req.body);
+    } catch (e) {
+      // ignore
+    }
+  }
+  next();
+});
 
 // Supabase Configuration
 function cleanEnvValue(value: string | undefined): string {
@@ -240,7 +253,7 @@ app.get("/api/config", (req, res) => {
 
 // Admin Login
 app.post("/api/auth/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password } = req.body || {};
 
   if (!email || !password) {
     return res.status(400).json({ success: false, error: "Email and password are required." });
@@ -320,7 +333,7 @@ app.get("/api/products", async (req, res) => {
 
 // POST - Add a product
 app.post("/api/products", async (req, res) => {
-  const { name, description, price, category, image_url, stock } = req.body;
+  const { name, description, price, category, image_url, stock } = req.body || {};
 
   if (!name || price === undefined) {
     return res.status(400).json({ success: false, error: "Product name and price are required." });
@@ -373,7 +386,7 @@ app.post("/api/products", async (req, res) => {
 // PUT - Update a product
 app.put("/api/products/:id", async (req, res) => {
   const { id } = req.params;
-  const { name, description, price, category, image_url, stock } = req.body;
+  const { name, description, price, category, image_url, stock } = req.body || {};
 
   const updateFields: any = {};
   if (name !== undefined) updateFields.name = name;
