@@ -75,7 +75,15 @@ app.use((req, res, next) => {
     req.url = req.url.replace("/.netlify/functions/api", "/api");
   } else if (req.url.startsWith("/.netlify/functions")) {
     req.url = req.url.replace("/.netlify/functions", "/api");
-  } else if (!req.url.startsWith("/api") && !req.url.startsWith("/assets") && !req.url.startsWith("/vite") && req.url !== "/" && !req.url.includes(".")) {
+  } else if (isServerless && 
+             !req.url.startsWith("/api") && 
+             !req.url.startsWith("/assets") && 
+             !req.url.startsWith("/vite") && 
+             !req.url.startsWith("/src") && 
+             !req.url.startsWith("/@") && 
+             !req.url.startsWith("/node_modules") && 
+             req.url !== "/" && 
+             !req.url.includes(".")) {
     req.url = "/api" + req.url;
   }
   
