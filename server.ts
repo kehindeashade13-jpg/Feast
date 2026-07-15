@@ -67,6 +67,24 @@ const PORT = 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// URL normalization middleware for Serverless compatibility (Netlify / Vercel)
+app.use((req, res, next) => {
+  const originalUrl = req.url;
+  
+  if (req.url.startsWith("/.netlify/functions/api")) {
+    req.url = req.url.replace("/.netlify/functions/api", "/api");
+  } else if (req.url.startsWith("/.netlify/functions")) {
+    req.url = req.url.replace("/.netlify/functions", "/api");
+  } else if (!req.url.startsWith("/api") && !req.url.startsWith("/assets") && !req.url.startsWith("/vite") && req.url !== "/" && !req.url.includes(".")) {
+    req.url = "/api" + req.url;
+  }
+  
+  if (originalUrl !== req.url) {
+    console.log(`[URL rewrite] serverless path rewritten from "${originalUrl}" to "${req.url}"`);
+  }
+  next();
+});
+
 // Safe parser middleware to handle cases where request body might be a raw string
 app.use((req, res, next) => {
   if (req.body && typeof req.body === "string") {

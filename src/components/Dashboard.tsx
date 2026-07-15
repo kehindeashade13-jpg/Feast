@@ -508,32 +508,10 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
           throw new Error(data.error || `Failed to add product (Status ${response.status}).`);
         }
       } else {
-        throw new Error("Server did not return JSON. Trying switching to Static Mode.");
+        throw new Error(`Server returned non-JSON response (Status ${response.status}).`);
       }
     } catch (error: any) {
       showToast(error.message, "error");
-      
-      // If it failed or was non-JSON, fallback to Static Mode immediately so their product isn't lost
-      setIsLocalStaticMode(true);
-      setIsFallback(true);
-      setDbError("Running in client-side Static Mode. All product changes are saved securely to Local Storage.");
-      
-      const newProduct: Product = {
-        id: `prod-${Date.now()}`,
-        name: formData.name,
-        description: formData.description,
-        price: parsePrice(formData.price),
-        stock: Number(formData.stock) || 0,
-        category: formData.category,
-        image_url: formData.image_url || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=800",
-        created_at: new Date().toISOString()
-      };
-      const updatedProducts = [newProduct, ...products];
-      setProducts(updatedProducts);
-      localStorage.setItem("local_products", JSON.stringify(updatedProducts));
-      showToast(`Product "${formData.name}" added successfully (Fallback to Local)!`, "success");
-      resetForm();
-      setActiveTab("catalog");
     }
   };
 
@@ -589,34 +567,10 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
           throw new Error(data.error || `Failed to update product (Status ${response.status}).`);
         }
       } else {
-        throw new Error("Server did not return JSON. Trying switching to Static Mode.");
+        throw new Error(`Server returned non-JSON response (Status ${response.status}).`);
       }
     } catch (error: any) {
       showToast(error.message, "error");
-
-      // Fallback to Static Mode
-      setIsLocalStaticMode(true);
-      setIsFallback(true);
-      setDbError("Running in client-side Static Mode. All product changes are saved securely to Local Storage.");
-
-      const updatedProducts = products.map(p => {
-        if (p.id === editingProduct.id) {
-          return {
-            ...p,
-            name: formData.name,
-            description: formData.description,
-            price: parsePrice(formData.price),
-            stock: Number(formData.stock) || 0,
-            category: formData.category,
-            image_url: formData.image_url
-          };
-        }
-        return p;
-      });
-      setProducts(updatedProducts);
-      localStorage.setItem("local_products", JSON.stringify(updatedProducts));
-      showToast(`Product updated successfully (Fallback to Local)!`, "success");
-      handleCloseEdit();
     }
   };
 
@@ -649,20 +603,10 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
           throw new Error(data.error || `Failed to delete product (Status ${response.status}).`);
         }
       } else {
-        throw new Error("Server did not return JSON. Trying switching to Static Mode.");
+        throw new Error(`Server returned non-JSON response (Status ${response.status}).`);
       }
     } catch (error: any) {
       showToast(error.message, "error");
-
-      // Fallback to Static Mode
-      setIsLocalStaticMode(true);
-      setIsFallback(true);
-      setDbError("Running in client-side Static Mode. All product changes are saved securely to Local Storage.");
-
-      const updatedProducts = products.filter(p => p.id !== id);
-      setProducts(updatedProducts);
-      localStorage.setItem("local_products", JSON.stringify(updatedProducts));
-      showToast(`Product "${name}" deleted successfully (Fallback to Local)!`, "info");
     }
   };
 
