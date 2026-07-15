@@ -7,6 +7,60 @@ import { fileURLToPath } from "url";
 
 dotenv.config();
 
+// Check if this file is the main entry point being executed directly
+export const isMainModule = (() => {
+  try {
+    if (!process.argv[1]) return false;
+    const currentFilePath = fileURLToPath(import.meta.url);
+    const mainPath = fs.realpathSync(process.argv[1]);
+    const currentPath = fs.realpathSync(currentFilePath);
+    return mainPath === currentPath || process.argv[1].endsWith("server.ts") || process.argv[1].endsWith("server.cjs");
+  } catch (e) {
+    return false;
+  }
+})();
+
+export const isServerless = 
+  process.env.VERCEL === "1" ||
+  process.env.NETLIFY === "true" ||
+  Boolean(process.env.LAMBDA_TASK_ROOT) ||
+  Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
+  Boolean(process.env.NETLIFY_IMAGES_CDN_DOMAIN) ||
+  !isMainModule;
+
+export function parsePrice(priceStr: any): number {
+  if (typeof priceStr === "number") {
+    return isNaN(priceStr) ? 0 : priceStr;
+  }
+  if (!priceStr) return 0;
+  
+  let clean = String(priceStr).trim();
+  
+  // Remove all common currency symbols: ₦, $, €, £, ¥, etc.
+  clean = clean.replace(/[₦$€£¥]/g, "");
+  
+  // If there's a comma followed by 2 digits at the end (European decimal comma), e.g. "12,34" or "1.234,56"
+  // let's convert it to standard decimal point.
+  if (/,[0-9]{2}$/.test(clean)) {
+    clean = clean.replace(/\./g, "").replace(",", ".");
+  } else {
+    // Otherwise, assume comma is a thousands separator and remove it
+    clean = clean.replace(/,/g, "");
+  }
+  
+  // Remove any remaining whitespace
+  clean = clean.replace(/\s/g, "");
+  
+  // Extract the first valid number sequence including decimal point
+  const matched = clean.match(/-?[0-9.]+/);
+  if (matched) {
+    const num = Number(matched[0]);
+    return isNaN(num) ? 0 : num;
+  }
+  
+  return 0;
+}
+
 export const app = express();
 const PORT = 3000;
 
@@ -132,23 +186,41 @@ const SEED_PRODUCTS = [
   }
 ];
 
+let localProductsInMemory = [...SEED_PRODUCTS];
+
+function getDbPath(): string {
+  if (isServerless) {
+    return path.join("/tmp", "data_products.json");
+  }
+  return LOCAL_DB_PATH;
+}
+
 function readLocalProducts() {
   try {
-    if (!fs.existsSync(LOCAL_DB_PATH)) {
-      fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(SEED_PRODUCTS, null, 2), "utf-8");
-      return SEED_PRODUCTS;
+    const dbPath = getDbPath();
+    if (!fs.existsSync(dbPath)) {
+      try {
+        fs.writeFileSync(dbPath, JSON.stringify(localProductsInMemory, null, 2), "utf-8");
+      } catch (writeErr) {
+        console.warn("Could not write initial local products file, using memory fallback:", writeErr);
+      }
+      return localProductsInMemory;
     }
-    const data = fs.readFileSync(LOCAL_DB_PATH, "utf-8");
-    return JSON.parse(data);
+    const data = fs.readFileSync(dbPath, "utf-8");
+    const parsed = JSON.parse(data);
+    localProductsInMemory = parsed;
+    return parsed;
   } catch (error) {
     console.error("Error reading local products:", error);
-    return SEED_PRODUCTS;
+    return localProductsInMemory;
   }
 }
 
 function writeLocalProducts(products: any[]) {
+  localProductsInMemory = products;
   try {
-    fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(products, null, 2), "utf-8");
+    const dbPath = getDbPath();
+    fs.writeFileSync(dbPath, JSON.stringify(products, null, 2), "utf-8");
   } catch (error) {
     console.error("Error writing local products:", error);
   }
@@ -257,7 +329,7 @@ app.post("/api/products", async (req, res) => {
   const newProduct = {
     name,
     description: description || "",
-    price: Number(price),
+    price: parsePrice(price),
     category: category || "General",
     image_url: image_url || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=800",
     stock: stock !== undefined ? Number(stock) : 0,
@@ -306,7 +378,7 @@ app.put("/api/products/:id", async (req, res) => {
   const updateFields: any = {};
   if (name !== undefined) updateFields.name = name;
   if (description !== undefined) updateFields.description = description;
-  if (price !== undefined) updateFields.price = Number(price);
+  if (price !== undefined) updateFields.price = parsePrice(price);
   if (category !== undefined) updateFields.category = category;
   if (image_url !== undefined) updateFields.image_url = image_url;
   if (stock !== undefined) updateFields.stock = Number(stock);
@@ -451,27 +523,6 @@ async function startServer() {
     console.log("- SUPABASE_ANON_KEY:", process.env.SUPABASE_ANON_KEY ? `DEFINED (length: ${process.env.SUPABASE_ANON_KEY.length})` : "UNDEFINED");
   });
 }
-
-// Check if this file is the main entry point being executed directly
-const isMainModule = (() => {
-  try {
-    if (!process.argv[1]) return false;
-    const currentFilePath = fileURLToPath(import.meta.url);
-    const mainPath = fs.realpathSync(process.argv[1]);
-    const currentPath = fs.realpathSync(currentFilePath);
-    return mainPath === currentPath || process.argv[1].endsWith("server.ts") || process.argv[1].endsWith("server.cjs");
-  } catch (e) {
-    return false;
-  }
-})();
-
-const isServerless = 
-  process.env.VERCEL === "1" ||
-  process.env.NETLIFY === "true" ||
-  Boolean(process.env.LAMBDA_TASK_ROOT) ||
-  Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
-  Boolean(process.env.NETLIFY_IMAGES_CDN_DOMAIN) ||
-  !isMainModule;
 
 if (!isServerless) {
   startServer();

@@ -14,6 +14,39 @@ interface ImagePickerProps {
   label?: string;
 }
 
+function parsePrice(priceStr: any): number {
+  if (typeof priceStr === "number") {
+    return isNaN(priceStr) ? 0 : priceStr;
+  }
+  if (!priceStr) return 0;
+  
+  let clean = String(priceStr).trim();
+  
+  // Remove all common currency symbols: ₦, $, €, £, ¥, etc.
+  clean = clean.replace(/[₦$€£¥]/g, "");
+  
+  // If there's a comma followed by 2 digits at the end (European decimal comma), e.g. "12,34" or "1.234,56"
+  // let's convert it to standard decimal point.
+  if (/,[0-9]{2}$/.test(clean)) {
+    clean = clean.replace(/\./g, "").replace(",", ".");
+  } else {
+    // Otherwise, assume comma is a thousands separator and remove it
+    clean = clean.replace(/,/g, "");
+  }
+  
+  // Remove any remaining whitespace
+  clean = clean.replace(/\s/g, "");
+  
+  // Extract the first valid number sequence including decimal point
+  const matched = clean.match(/-?[0-9.]+/);
+  if (matched) {
+    const num = Number(matched[0]);
+    return isNaN(num) ? 0 : num;
+  }
+  
+  return 0;
+}
+
 function ImagePicker({ value, onChange, label = "Product Image" }: ImagePickerProps) {
   const [mode, setMode] = useState<"upload" | "url">(value.startsWith("data:image") || !value ? "upload" : "url");
   const [isDragActive, setIsDragActive] = useState(false);
@@ -434,7 +467,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
         id: `prod-${Date.now()}`,
         name: formData.name,
         description: formData.description,
-        price: Number(formData.price),
+        price: parsePrice(formData.price),
         stock: Number(formData.stock) || 0,
         category: formData.category,
         image_url: formData.image_url || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=800",
@@ -456,7 +489,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
         body: JSON.stringify({
           name: formData.name,
           description: formData.description,
-          price: Number(formData.price),
+          price: parsePrice(formData.price),
           stock: Number(formData.stock) || 0,
           category: formData.category,
           image_url: formData.image_url
@@ -494,7 +527,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
             ...p,
             name: formData.name,
             description: formData.description,
-            price: Number(formData.price),
+            price: parsePrice(formData.price),
             stock: Number(formData.stock) || 0,
             category: formData.category,
             image_url: formData.image_url
@@ -516,7 +549,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
         body: JSON.stringify({
           name: formData.name,
           description: formData.description,
-          price: Number(formData.price),
+          price: parsePrice(formData.price),
           stock: Number(formData.stock) || 0,
           category: formData.category,
           image_url: formData.image_url
@@ -948,10 +981,8 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                         ₦
                       </span>
                       <input
-                        type="number"
+                        type="text"
                         required
-                        step="0.01"
-                        min="0"
                         name="price"
                         value={formData.price}
                         onChange={handleFormChange}
@@ -1108,10 +1139,8 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                         ₦
                       </span>
                       <input
-                        type="number"
+                        type="text"
                         required
-                        step="0.01"
-                        min="0"
                         name="price"
                         value={formData.price}
                         onChange={handleFormChange}
