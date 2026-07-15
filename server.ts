@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
@@ -424,13 +425,14 @@ app.delete("/api/products/:id", async (req, res) => {
 // Main Setup (Express + Vite)
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
-    const { createServer: createViteServer } = await import("vite");
-    const vite = await createViteServer({
+    // Hide 'vite' import from bundlers (e.g. Esbuild on Netlify) to avoid runtime errors in serverless environments
+    const viteModule = await (new Function('return import("vite")')() as Promise<any>);
+    const vite = await viteModule.createServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
-    console.log("Vite development middleware mounted.");
+    console.log("Vite development middleware mounted dynamically.");
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
@@ -450,6 +452,27 @@ async function startServer() {
   });
 }
 
-if (!process.env.VERCEL && !process.env.NETLIFY && !process.env.LAMBDA_TASK_ROOT && !process.env.AWS_LAMBDA_FUNCTION_NAME && !process.env.NETLIFY_IMAGES_CDN_DOMAIN) {
+// Check if this file is the main entry point being executed directly
+const isMainModule = (() => {
+  try {
+    if (!process.argv[1]) return false;
+    const currentFilePath = fileURLToPath(import.meta.url);
+    const mainPath = fs.realpathSync(process.argv[1]);
+    const currentPath = fs.realpathSync(currentFilePath);
+    return mainPath === currentPath || process.argv[1].endsWith("server.ts") || process.argv[1].endsWith("server.cjs");
+  } catch (e) {
+    return false;
+  }
+})();
+
+const isServerless = 
+  process.env.VERCEL === "1" ||
+  process.env.NETLIFY === "true" ||
+  Boolean(process.env.LAMBDA_TASK_ROOT) ||
+  Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
+  Boolean(process.env.NETLIFY_IMAGES_CDN_DOMAIN) ||
+  !isMainModule;
+
+if (!isServerless) {
   startServer();
 }

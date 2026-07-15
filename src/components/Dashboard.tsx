@@ -17,16 +17,18 @@ interface ImagePickerProps {
 function ImagePicker({ value, onChange, label = "Product Image" }: ImagePickerProps) {
   const [mode, setMode] = useState<"upload" | "url">(value.startsWith("data:image") || !value ? "upload" : "url");
   const [isDragActive, setIsDragActive] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleFile = (file: File) => {
     if (!file) return;
+    setError(null);
     if (!file.type.startsWith("image/")) {
-      alert("Please upload an image file (PNG, JPG, WEBP etc.)");
+      setError("Please upload a valid image file (PNG, JPG, WEBP etc.)");
       return;
     }
     // Limit to 2.5MB to keep Base64 strings reasonable
     if (file.size > 2.5 * 1024 * 1024) {
-      alert("Image is too large. Please upload an image smaller than 2.5MB.");
+      setError("Image is too large. Must be smaller than 2.5MB.");
       return;
     }
 
@@ -182,6 +184,12 @@ function ImagePicker({ value, onChange, label = "Product Image" }: ImagePickerPr
               Paste an external photo web link (e.g., Unsplash, Imgur, Shopify CDN).
             </p>
           </div>
+        </div>
+      )}
+      {error && (
+        <div className="text-xs text-rose-600 font-medium flex items-center gap-1.5 mt-2 bg-rose-50/50 border border-rose-100 p-2 rounded-lg">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span>{error}</span>
         </div>
       )}
     </div>
