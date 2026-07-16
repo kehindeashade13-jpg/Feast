@@ -62,6 +62,48 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
   // Categories list
   const categories = ["All", "Burgers", "Shawarma", "Chicken", "Sides", "Drinks"];
 
+  // Chef's special carousel list
+  const chefSpecialItems = initialProducts && initialProducts.length > 0 
+    ? initialProducts 
+    : [
+        {
+          id: "default-suya",
+          name: "Authentic Chicken Suya",
+          price: 9000,
+          image_url: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800",
+          category: "Chicken",
+          description: "Tender boneless chicken thigh pieces seasoned in spicy roasted peanut rub (yaji spice) and smoked over red-hot charcoal, served with fresh sliced red onions, cabbage, and extra yaji."
+        },
+        {
+          id: "default-burger",
+          name: "Double Grilled Chicken Burger",
+          price: 10500,
+          image_url: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80&w=800",
+          category: "Burgers",
+          description: "Juicy double-stacked grilled chicken breast patties, melted cheddar cheese, fresh lettuce, sliced tomatoes, caramelized onions, and our signature burger sauce on a toasted brioche bun."
+        },
+        {
+          id: "default-wrap",
+          name: "Spicy Beef Shawarma Wrap",
+          price: 8500,
+          image_url: "https://images.unsplash.com/photo-1608897013039-887f21d8c804?auto=format&fit=crop&q=80&w=800",
+          category: "Shawarma",
+          description: "Premium sliced flank beef slow-roasted and marinated in authentic Middle Eastern spices, wrapped in toasted pita with French fries, pickled cucumbers, cabbage salad, and garlic tahini sauce."
+        }
+      ];
+
+  const [currentChefSpecialIndex, setCurrentChefSpecialIndex] = useState(0);
+
+  useEffect(() => {
+    if (chefSpecialItems.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentChefSpecialIndex((prev) => (prev + 1) % chefSpecialItems.length);
+    }, 4500); // rotate every 4.5 seconds
+    return () => clearInterval(interval);
+  }, [chefSpecialItems.length]);
+
+  const currentSpecial = chefSpecialItems[currentChefSpecialIndex % chefSpecialItems.length] || chefSpecialItems[0];
+
   // Fetch / Sync Cart on mount
   useEffect(() => {
     const savedCart = localStorage.getItem("cf_cart");
@@ -399,20 +441,49 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
                 {/* Hero Image */}
                 <div className="lg:col-span-5 relative">
                   <div className="absolute inset-0 bg-amber-400/20 rounded-full blur-3xl scale-95" />
-                  <div className="relative border-4 border-neutral-800 rounded-3xl overflow-hidden aspect-square max-w-md mx-auto shadow-2xl">
-                    <img 
-                      src="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800" 
-                      alt="Smoked Chicken Suya" 
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute bottom-4 left-4 right-4 bg-neutral-900/90 border border-neutral-850 p-4 rounded-2xl backdrop-blur-sm flex items-center justify-between">
-                      <div>
-                        <span className="text-xs text-amber-400 uppercase tracking-widest font-bold">Chef's Special</span>
-                        <h3 className="text-sm font-bold text-white mt-0.5">Authentic Chicken Suya</h3>
-                      </div>
-                      <span className="font-mono text-amber-400 font-extrabold">₦9,000</span>
-                    </div>
+                  <div className="relative border-4 border-neutral-800 rounded-3xl overflow-hidden aspect-square max-w-md mx-auto shadow-2xl bg-neutral-900">
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={currentSpecial.id}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 1.05 }}
+                        transition={{ duration: 0.6, ease: "easeInOut" }}
+                        className="absolute inset-0 w-full h-full"
+                      >
+                        <img 
+                          src={currentSpecial.image_url || "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800"} 
+                          alt={currentSpecial.name} 
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute bottom-4 left-4 right-4 bg-neutral-900/95 border border-neutral-800 p-4 rounded-2xl backdrop-blur-md flex items-center justify-between shadow-lg">
+                          <div className="flex-1 min-w-0 pr-3">
+                            <span className="text-[10px] text-amber-400 uppercase tracking-widest font-extrabold flex items-center gap-1">
+                              <Flame className="w-3 h-3 fill-amber-400 animate-pulse" /> Chef's Special
+                            </span>
+                            <h3 className="text-xs sm:text-sm font-bold text-white mt-0.5 truncate">{currentSpecial.name}</h3>
+                          </div>
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            <span className="font-mono text-amber-400 font-extrabold text-xs sm:text-sm">
+                              ₦{currentSpecial.price?.toLocaleString()}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCustomizingProduct(currentSpecial as Product);
+                                setSelectedSize("Regular");
+                                setSelectedSpice("Spicy");
+                                setSelectedExtras([]);
+                              }}
+                              className="text-[9px] sm:text-[10px] bg-amber-400 hover:bg-amber-500 text-black font-extrabold px-2 py-1 rounded-lg transition uppercase flex items-center gap-1 border border-amber-300 cursor-pointer"
+                            >
+                              Add +
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    </AnimatePresence>
                   </div>
                 </div>
               </div>

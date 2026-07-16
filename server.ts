@@ -671,16 +671,58 @@ app.post("/api/orders", async (req, res) => {
 
   if (isSupabaseConfigured && supabase) {
     try {
-      const dbOrder = { ...newOrder };
+      let dbOrder: any = { ...newOrder };
       delete dbOrder.id; // Let Supabase handle the UUID
 
-      const { data, error } = await supabase
-        .from("orders")
-        .insert([dbOrder])
-        .select();
+      let data: any = null;
+      let error: any = null;
+      let attempts = 0;
+      const maxAttempts = 4;
+
+      while (attempts < maxAttempts) {
+        const result = await supabase
+          .from("orders")
+          .insert([dbOrder])
+          .select();
+
+        if (!result.error) {
+          data = result.data;
+          error = null;
+          break;
+        }
+
+        error = result.error;
+        const msg = error.message || "";
+        console.warn(`Supabase order insertion attempt ${attempts + 1} failed: ${msg}`);
+
+        // Try to parse the missing column name from common error formats:
+        // Format 1: "Could not find the 'customer_email' column of 'orders' in the schema cache"
+        // Format 2: "column \"customer_email\" of relation \"orders\" does not exist"
+        let missingColumn: string | null = null;
+        const match1 = msg.match(/Could not find the '([^']+)' column/i);
+        const match2 = msg.match(/column "([^"]+)" of relation/i);
+        const match3 = msg.match(/column ([a-zA-Z0-9_]+) does not exist/i);
+
+        if (match1) {
+          missingColumn = match1[1];
+        } else if (match2) {
+          missingColumn = match2[1];
+        } else if (match3) {
+          missingColumn = match3[1];
+        }
+
+        if (missingColumn && dbOrder[missingColumn] !== undefined) {
+          console.warn(`Self-healing database insert: Removing missing column "${missingColumn}" and retrying...`);
+          delete dbOrder[missingColumn];
+          attempts++;
+        } else {
+          // If we can't identify a missing column to drop, stop retrying
+          break;
+        }
+      }
 
       if (error) {
-        console.warn("Supabase insert order failed, inserting locally. Error:", error.message);
+        console.warn("Supabase insert order failed after self-healing attempts, inserting locally. Error:", error.message);
         newOrder.id = `order-${Date.now()}`;
         const orders = readLocalOrders();
         orders.unshift(newOrder);
