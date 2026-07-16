@@ -298,6 +298,49 @@ function writeLocalProducts(products: any[]) {
   }
 }
 
+// Local Orders DB Setup
+const LOCAL_ORDERS_PATH = path.join(process.cwd(), "data_orders.json");
+let localOrdersInMemory: any[] = [];
+
+function getOrdersDbPath(): string {
+  if (isServerless) {
+    return path.join("/tmp", "data_orders.json");
+  }
+  return LOCAL_ORDERS_PATH;
+}
+
+function readLocalOrders(): any[] {
+  try {
+    const ordersPath = getOrdersDbPath();
+    if (!fs.existsSync(ordersPath)) {
+      try {
+        fs.writeFileSync(ordersPath, JSON.stringify([], null, 2), "utf-8");
+      } catch (writeErr) {
+        console.warn("Could not write initial local orders file, using memory fallback:", writeErr);
+      }
+      return localOrdersInMemory;
+    }
+    const data = fs.readFileSync(ordersPath, "utf-8");
+    const parsed = JSON.parse(data);
+    localOrdersInMemory = parsed;
+    return parsed;
+  } catch (error) {
+    console.error("Error reading local orders:", error);
+    return localOrdersInMemory;
+  }
+}
+
+function writeLocalOrders(orders: any[]) {
+  localOrdersInMemory = orders;
+  try {
+    const ordersPath = getOrdersDbPath();
+    fs.writeFileSync(ordersPath, JSON.stringify(orders, null, 2), "utf-8");
+  } catch (error) {
+    console.error("Error writing local orders:", error);
+  }
+}
+
+
 // API Routes
 
 // Get configuration status
@@ -562,6 +605,219 @@ app.delete("/api/products/:id", async (req, res) => {
     const products = readLocalProducts();
     const filtered = products.filter((p: any) => p.id !== id);
     writeLocalProducts(filtered);
+    return res.json({ success: true, deletedId: id, isFallback: true });
+  }
+});
+
+// ORDERS ENDPOINTS
+
+// GET - Retrieve all orders
+app.get("/api/orders", async (req, res) => {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.warn("Supabase fetch orders failed, falling back to local. Error:", error.message);
+        const orders = readLocalOrders();
+        return res.json({ success: true, orders, isFallback: true, error: error.message });
+      }
+      return res.json({ success: true, orders: data || [], isFallback: false });
+    } catch (err: any) {
+      console.error("Supabase orders fetch crash:", err);
+      const orders = readLocalOrders();
+      return res.json({ success: true, orders, isFallback: true, error: err.message });
+    }
+  } else {
+    const orders = readLocalOrders();
+    return res.json({ success: true, orders, isFallback: true });
+  }
+});
+
+// POST - Place a new order
+app.post("/api/orders", async (req, res) => {
+  const {
+    customer_name,
+    customer_phone,
+    customer_email,
+    delivery_address,
+    delivery_instructions,
+    items,
+    total_price,
+    payment_method,
+    status
+  } = req.body;
+
+  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+  const order_number = `CF-${randomSuffix}`;
+
+  const newOrder = {
+    id: isSupabaseConfigured ? undefined : `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    order_number,
+    customer_name: customer_name || "Guest Customer",
+    customer_phone: customer_phone || "",
+    customer_email: customer_email || "",
+    delivery_address: delivery_address || "",
+    delivery_instructions: delivery_instructions || "",
+    items: typeof items === "string" ? JSON.parse(items) : (items || []),
+    total_price: Number(total_price) || 0,
+    payment_method: payment_method || "Cash on Delivery",
+    status: status || "Pending",
+    created_at: new Date().toISOString()
+  };
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const dbOrder = { ...newOrder };
+      delete dbOrder.id; // Let Supabase handle the UUID
+
+      const { data, error } = await supabase
+        .from("orders")
+        .insert([dbOrder])
+        .select();
+
+      if (error) {
+        console.warn("Supabase insert order failed, inserting locally. Error:", error.message);
+        newOrder.id = `order-${Date.now()}`;
+        const orders = readLocalOrders();
+        orders.unshift(newOrder);
+        writeLocalOrders(orders);
+        return res.json({ success: true, order: newOrder, isFallback: true, error: error.message });
+      }
+      return res.json({ success: true, order: data?.[0] || newOrder, isFallback: false });
+    } catch (err: any) {
+      console.error("Supabase insert order crash:", err);
+      newOrder.id = `order-${Date.now()}`;
+      const orders = readLocalOrders();
+      orders.unshift(newOrder);
+      writeLocalOrders(orders);
+      return res.json({ success: true, order: newOrder, isFallback: true, error: err.message });
+    }
+  } else {
+    const orders = readLocalOrders();
+    orders.unshift(newOrder);
+    writeLocalOrders(orders);
+    return res.json({ success: true, order: newOrder, isFallback: true });
+  }
+});
+
+// PUT - Update order status (for admin)
+app.put("/api/orders/:id/status", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!status) {
+    return res.status(400).json({ success: false, error: "Status field is required" });
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const isLocalId = id.startsWith("order-");
+      if (isLocalId) {
+        const orders = readLocalOrders();
+        const idx = orders.findIndex((o: any) => o.id === id);
+        if (idx !== -1) {
+          orders[idx].status = status;
+          writeLocalOrders(orders);
+          return res.json({ success: true, order: orders[idx], isFallback: true });
+        }
+        return res.status(404).json({ success: false, error: "Local order not found." });
+      }
+
+      const { data, error } = await supabase
+        .from("orders")
+        .update({ status })
+        .eq("id", id)
+        .select();
+
+      if (error) {
+        console.warn("Supabase update order status failed, updating locally. Error:", error.message);
+        const orders = readLocalOrders();
+        const idx = orders.findIndex((o: any) => o.id === id);
+        if (idx !== -1) {
+          orders[idx].status = status;
+          writeLocalOrders(orders);
+          return res.json({ success: true, order: orders[idx], isFallback: true, error: error.message });
+        }
+        return res.status(404).json({ success: false, error: "Order not found in database or locally." });
+      }
+
+      if (!data || data.length === 0) {
+        const orders = readLocalOrders();
+        const idx = orders.findIndex((o: any) => o.id === id);
+        if (idx !== -1) {
+          orders[idx].status = status;
+          writeLocalOrders(orders);
+          return res.json({ success: true, order: orders[idx], isFallback: true });
+        }
+        return res.status(404).json({ success: false, error: "Order not found." });
+      }
+
+      return res.json({ success: true, order: data[0], isFallback: false });
+    } catch (err: any) {
+      console.error("Supabase update order status crash:", err);
+      const orders = readLocalOrders();
+      const idx = orders.findIndex((o: any) => o.id === id);
+      if (idx !== -1) {
+        orders[idx].status = status;
+        writeLocalOrders(orders);
+        return res.json({ success: true, order: orders[idx], isFallback: true, error: err.message });
+      }
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  } else {
+    const orders = readLocalOrders();
+    const idx = orders.findIndex((o: any) => o.id === id);
+    if (idx !== -1) {
+      orders[idx].status = status;
+      writeLocalOrders(orders);
+      return res.json({ success: true, order: orders[idx], isFallback: true });
+    }
+    return res.status(404).json({ success: false, error: "Order not found." });
+  }
+});
+
+// DELETE - Remove an order (administrative clean up)
+app.delete("/api/orders/:id", async (req, res) => {
+  const { id } = req.params;
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const isLocalId = id.startsWith("order-");
+      if (isLocalId) {
+        const orders = readLocalOrders();
+        const filtered = orders.filter((o: any) => o.id !== id);
+        writeLocalOrders(filtered);
+        return res.json({ success: true, deletedId: id, isFallback: true });
+      }
+
+      const { error } = await supabase
+        .from("orders")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        console.warn("Supabase delete order failed, trying to delete locally. Error:", error.message);
+        const orders = readLocalOrders();
+        const filtered = orders.filter((o: any) => o.id !== id);
+        writeLocalOrders(filtered);
+        return res.json({ success: true, deletedId: id, isFallback: true, error: error.message });
+      }
+      return res.json({ success: true, deletedId: id, isFallback: false });
+    } catch (err: any) {
+      console.error("Supabase delete order crash:", err);
+      const orders = readLocalOrders();
+      const filtered = orders.filter((o: any) => o.id !== id);
+      writeLocalOrders(filtered);
+      return res.json({ success: true, deletedId: id, isFallback: true, error: err.message });
+    }
+  } else {
+    const orders = readLocalOrders();
+    const filtered = orders.filter((o: any) => o.id !== id);
+    writeLocalOrders(filtered);
     return res.json({ success: true, deletedId: id, isFallback: true });
   }
 });

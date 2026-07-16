@@ -4,8 +4,9 @@ import { Terminal, Copy, Check, ExternalLink, Database } from "lucide-react";
 export function SupabaseHelper() {
   const [copied, setCopied] = useState(false);
 
-  const sqlCode = `-- 0. CLEANUP OVERRIDE: Remove any previous table version safely if it already exists
+  const sqlCode = `-- 0. CLEANUP OVERRIDE: Remove previous table versions safely if they already exist
 drop table if exists public.products cascade;
+drop table if exists public.orders cascade;
 
 -- 1. Create the 'products' table in Supabase
 create table public.products (
@@ -19,29 +20,44 @@ create table public.products (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 2. Optional: Insert some premium sample seed data with Naira pricing
+-- 2. Create the 'orders' table in Supabase
+create table public.orders (
+  id uuid default gen_random_uuid() primary key,
+  order_number text not null,
+  customer_name text not null,
+  customer_phone text not null,
+  customer_email text,
+  delivery_address text not null,
+  delivery_instructions text,
+  items jsonb not null,
+  total_price numeric not null,
+  status text default 'Pending',
+  payment_method text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 3. Insert some premium sample seed data with Naira pricing
 insert into public.products (name, description, price, category, image_url, stock)
 values 
-  ('Double Grilled Chicken Burger', 'Juicy double-stacked grilled chicken breast patties, melted cheddar cheese, fresh lettuce, sliced tomatoes, caramelized onions, and our signature burger sauce on a toasted brioche bun.', 10500.00, 'Burger', 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80&w=800', 25),
+  ('Double Grilled Chicken Burger', 'Juicy double-stacked grilled chicken breast patties, melted cheddar cheese, fresh lettuce, sliced tomatoes, caramelized onions, and our signature burger sauce on a toasted brioche bun.', 10500.00, 'Burgers', 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80&w=800', 25),
   ('Spicy Beef Shawarma Wrap', 'Premium sliced flank beef slow-roasted and marinated in authentic Middle Eastern spices, wrapped in toasted pita with French fries, pickled cucumbers, cabbage salad, and rich garlic tahini sauce.', 8500.00, 'Shawarma', 'https://images.unsplash.com/photo-1608897013039-887f21d8c804?auto=format&fit=crop&q=80&w=800', 50),
-  ('Authentic Smoked Chicken Suya', 'Tender boneless chicken thigh pieces seasoned in spicy roasted peanut rub (yaji spice) and smoked over red-hot charcoal, served with fresh sliced red onions, cabbage, and extra yaji.', 9000.00, 'Chicken Suya', 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800', 30),
-  ('Jumbo Chicken Suya Wrap', 'Toasted flatbread filled with juicy chopped chicken suya, shredded lettuce, tomatoes, sliced onions, and a splash of spicy yaji mayo dressing.', 7500.00, 'Chicken Suya', 'https://images.unsplash.com/photo-1642d8d3f63c800888?auto=format&fit=crop&q=80&w=800', 20),
-  ('Crispy Chicken Burger with Fries', 'Crispy golden buttermilk fried chicken breast, pickles, spicy coleslaw, and herb mayo in a toasted bun, served with a side of crispy French fries.', 11000.00, 'Burger', 'https://images.unsplash.com/photo-1525059696034-4967a8e1dca2?auto=format&fit=crop&q=80&w=800', 15);
+  ('Authentic Smoked Chicken Suya', 'Tender boneless chicken thigh pieces seasoned in spicy roasted peanut rub (yaji spice) and smoked over red-hot charcoal, served with fresh sliced red onions, cabbage, and extra yaji.', 9000.00, 'Chicken', 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800', 30),
+  ('Jumbo Chicken Suya Wrap', 'Toasted flatbread filled with juicy chopped chicken suya, shredded lettuce, tomatoes, sliced onions, and a splash of spicy yaji mayo dressing.', 7500.00, 'Shawarma', 'https://images.unsplash.com/photo-1642d8d3f63c800888?auto=format&fit=crop&q=80&w=800', 20),
+  ('Crispy Chicken Burger with Fries', 'Crispy golden buttermilk fried chicken breast, pickles, spicy coleslaw, and herb mayo in a toasted bun, served with a side of crispy French fries.', 11000.00, 'Burgers', 'https://images.unsplash.com/photo-1525059696034-4967a8e1dca2?auto=format&fit=crop&q=80&w=800', 15);
 
--- 3. Enable Row Level Security (RLS) & establish explicit policies for development & admin access
+-- 4. Enable Row Level Security (RLS) & establish explicit policies for products
 alter table public.products enable row level security;
-
--- Create policy to allow open read queries for shop catalog rendering
 create policy "Allow public select" on public.products for select using (true);
-
--- Create policy to allow public inserts
 create policy "Allow public insert" on public.products for insert with check (true);
-
--- Create policy to allow public updates
 create policy "Allow public update" on public.products for update using (true) with check (true);
+create policy "Allow public delete" on public.products for delete using (true);
 
--- Create policy to allow public deletes
-create policy "Allow public delete" on public.products for delete using (true);`;
+-- 5. Enable Row Level Security (RLS) & establish explicit policies for orders
+alter table public.orders enable row level security;
+create policy "Allow public select orders" on public.orders for select using (true);
+create policy "Allow public insert orders" on public.orders for insert with check (true);
+create policy "Allow public update orders" on public.orders for update using (true) with check (true);
+create policy "Allow public delete orders" on public.orders for delete using (true);`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(sqlCode);

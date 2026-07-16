@@ -239,7 +239,10 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [activeTab, setActiveTab] = useState<"catalog" | "add" | "setup">("catalog");
+  const [activeTab, setActiveTab] = useState<"catalog" | "add" | "orders" | "setup">("catalog");
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>("All");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const [dbError, setDbError] = useState<string | null>(null);
   const [isFallback, setIsFallback] = useState(false);
@@ -421,6 +424,66 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
 
   useEffect(() => {
     fetchData();
+  }, []);
+
+  const fetchOrders = async () => {
+    setLoadingOrders(true);
+    try {
+      const res = await fetch("/api/orders");
+      const data = await res.json();
+      if (data.success) {
+        setOrders(data.orders || []);
+      }
+    } catch (err) {
+      console.error("Failed to load orders in admin panel:", err);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Order status updated to ${newStatus}!`, "success");
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      } else {
+        showToast(data.error || "Failed to update status", "error");
+      }
+    } catch (err) {
+      console.error("Failed to update status:", err);
+      showToast("Error updating status.", "error");
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!window.confirm("Are you sure you want to delete this order record?")) return;
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "DELETE"
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast("Order record deleted.", "success");
+        setOrders(prev => prev.filter(o => o.id !== orderId));
+      } else {
+        showToast(data.error || "Failed to delete order", "error");
+      }
+    } catch (err) {
+      console.error("Failed to delete order:", err);
+      showToast("Error deleting order.", "error");
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+    const interval = setInterval(fetchOrders, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
@@ -791,6 +854,24 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
             )}
           </button>
           <button
+            onClick={() => setActiveTab("orders")}
+            className={`pb-3 relative transition-colors cursor-pointer flex items-center gap-1.5 ${
+              activeTab === "orders" ? "text-amber-600 font-bold" : "text-neutral-500 hover:text-neutral-800"
+            }`}
+          >
+            <ShoppingBag className="w-3.5 h-3.5" /> Manage Orders
+            {orders.length > 0 && (
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                orders.filter(o => o.status === "Pending").length > 0 ? "bg-amber-500 text-black animate-pulse" : "bg-neutral-200 text-neutral-800"
+              }`}>
+                {orders.length}
+              </span>
+            )}
+            {activeTab === "orders" && (
+              <motion.div layoutId="activeTabIndicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500" />
+            )}
+          </button>
+          <button
             onClick={() => setActiveTab("setup")}
             className={`pb-3 relative transition-colors cursor-pointer flex items-center gap-1.5 ${
               activeTab === "setup" ? "text-emerald-700 font-bold" : "text-neutral-500 hover:text-neutral-800"
@@ -1099,6 +1180,222 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
           {activeTab === "setup" && (
             <div className="space-y-6">
               <SupabaseHelper />
+            </div>
+          )}
+
+          {/* TAB 4: MANAGE ORDERS */}
+          {activeTab === "orders" && (
+            <div className="space-y-6">
+              <div className="bg-white border border-neutral-200 rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h3 className="font-sans font-semibold text-lg text-neutral-900 flex items-center gap-2">
+                    <ShoppingBag className="w-5 h-5 text-amber-500" /> Customer Orders
+                  </h3>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    View, accept, reject, and update order statuses in real-time. Automatically synchronized.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-neutral-500">Filter:</span>
+                  <select
+                    value={orderStatusFilter}
+                    onChange={(e) => setOrderStatusFilter(e.target.value)}
+                    className="text-xs bg-neutral-50 border border-neutral-250 hover:border-neutral-900 rounded-xl px-3 py-1.5 font-medium outline-none transition"
+                  >
+                    <option value="All">All Statuses</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Preparing">Preparing</option>
+                    <option value="Ready">Ready</option>
+                    <option value="Out for Delivery">Out for Delivery</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                  <button
+                    onClick={fetchOrders}
+                    className="p-1.5 rounded-xl hover:bg-neutral-100 text-neutral-500 transition-colors cursor-pointer flex items-center justify-center"
+                    title="Refresh Orders"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loadingOrders ? "animate-spin" : ""}`} />
+                  </button>
+                </div>
+              </div>
+
+              {loadingOrders && orders.length === 0 ? (
+                <div className="text-center py-16 bg-white border border-neutral-200 rounded-2xl shadow-sm">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-neutral-900 mx-auto mb-3" />
+                  <p className="text-xs text-neutral-500">Loading incoming orders...</p>
+                </div>
+              ) : orders.length === 0 ? (
+                <div className="text-center py-16 bg-white border border-neutral-200 rounded-2xl shadow-sm">
+                  <ShoppingBag className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
+                  <h3 className="font-sans font-semibold text-sm text-neutral-800">No Orders Placed Yet</h3>
+                  <p className="text-xs text-neutral-500 mt-1">When customers place orders from the storefront, they will show up here.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {orders
+                    .filter(o => orderStatusFilter === "All" || o.status === orderStatusFilter)
+                    .map((order) => {
+                      const orderItems = Array.isArray(order.items) ? order.items : [];
+                      return (
+                        <div key={order.id} className="bg-white border border-neutral-200 rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden">
+                          {/* Top bar of order */}
+                          <div className="bg-neutral-50 px-5 py-4 border-b border-neutral-150 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <span className="font-mono text-sm font-bold text-neutral-900 bg-amber-400 text-black px-2.5 py-1 rounded-lg">
+                                {order.order_number}
+                              </span>
+                              <span className="text-xs text-neutral-400 font-mono">
+                                {new Date(order.created_at).toLocaleString("en-NG", { hour12: true })}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-neutral-500">Status:</span>
+                              <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
+                                order.status === "Pending" ? "bg-amber-100 text-amber-800 border border-amber-200" :
+                                order.status === "Preparing" ? "bg-blue-100 text-blue-800 border border-blue-200 animate-pulse" :
+                                order.status === "Ready" ? "bg-purple-100 text-purple-800 border border-purple-200" :
+                                order.status === "Out for Delivery" ? "bg-teal-100 text-teal-800 border border-teal-200" :
+                                order.status === "Delivered" ? "bg-emerald-100 text-emerald-800 border border-emerald-200" :
+                                "bg-rose-100 text-rose-800 border border-rose-200"
+                              }`}>
+                                {order.status}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Detail row */}
+                          <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {/* Customer profile */}
+                            <div className="space-y-3">
+                              <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Customer Details</h4>
+                              <div className="space-y-1.5 text-xs text-neutral-700 font-sans">
+                                <p><span className="font-semibold text-neutral-900">Name:</span> {order.customer_name}</p>
+                                <p><span className="font-semibold text-neutral-900">Phone:</span> {order.customer_phone}</p>
+                                {order.customer_email && <p><span className="font-semibold text-neutral-900">Email:</span> {order.customer_email}</p>}
+                                <p className="mt-2"><span className="font-semibold text-neutral-900">Address:</span></p>
+                                <p className="bg-neutral-50 p-2 rounded-lg border border-neutral-100 italic text-neutral-600 font-medium">
+                                  {order.delivery_address}
+                                </p>
+                                {order.delivery_instructions && (
+                                  <>
+                                    <p className="mt-1"><span className="font-semibold text-neutral-900">Instructions:</span></p>
+                                    <p className="text-neutral-500 text-[11px] italic">{order.delivery_instructions}</p>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Order summary */}
+                            <div className="space-y-3">
+                              <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Order Items ({orderItems.length})</h4>
+                              <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                                {orderItems.map((item: any, idx: number) => (
+                                  <div key={idx} className="flex justify-between items-start text-xs border-b border-neutral-100 pb-2">
+                                    <div className="font-sans">
+                                      <span className="font-semibold text-neutral-900">{item.quantity}x</span> {item.name}
+                                      {item.customizations && (
+                                        <div className="text-[10px] text-amber-700 italic mt-0.5 font-medium">
+                                          {item.customizations.size && `Size: ${item.customizations.size}`}
+                                          {item.customizations.spice && ` • Spice: ${item.customizations.spice}`}
+                                          {item.customizations.extras && item.customizations.extras.length > 0 && ` • Extras: ${item.customizations.extras.join(", ")}`}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <span className="font-mono text-neutral-600 font-medium">₦{item.price?.toLocaleString()}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="pt-2 border-t border-neutral-150 flex justify-between items-center">
+                                <span className="text-xs font-semibold text-neutral-500">Payment: {order.payment_method}</span>
+                                <span className="text-sm font-bold text-neutral-900 font-mono">₦{order.total_price?.toLocaleString()}</span>
+                              </div>
+                            </div>
+
+                            {/* Actions and Status Management */}
+                            <div className="flex flex-col justify-between space-y-4 bg-amber-50/20 p-4 rounded-xl border border-amber-100/60">
+                              <div>
+                                <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider mb-2">Order Workflow</h4>
+                                <div className="space-y-2">
+                                  {order.status === "Pending" && (
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => handleUpdateOrderStatus(order.id, "Preparing")}
+                                        className="flex-1 bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold py-2 rounded-lg transition shadow-sm cursor-pointer"
+                                      >
+                                        Accept Order
+                                      </button>
+                                      <button
+                                        onClick={() => handleUpdateOrderStatus(order.id, "Cancelled")}
+                                        className="bg-neutral-200 hover:bg-neutral-300 text-neutral-800 text-xs font-semibold py-2 px-3 rounded-lg transition cursor-pointer"
+                                      >
+                                        Reject
+                                      </button>
+                                    </div>
+                                  )}
+
+                                  <div className="flex flex-col gap-1.5">
+                                    <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wide">Advance Status:</span>
+                                    <div className="grid grid-cols-2 gap-1">
+                                      <button
+                                        onClick={() => handleUpdateOrderStatus(order.id, "Preparing")}
+                                        className={`text-[11px] py-1.5 rounded-md font-semibold transition ${
+                                          order.status === "Preparing" ? "bg-blue-600 text-white" : "bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50"
+                                        }`}
+                                      >
+                                        Preparing
+                                      </button>
+                                      <button
+                                        onClick={() => handleUpdateOrderStatus(order.id, "Ready")}
+                                        className={`text-[11px] py-1.5 rounded-md font-semibold transition ${
+                                          order.status === "Ready" ? "bg-purple-600 text-white" : "bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50"
+                                        }`}
+                                      >
+                                        Ready
+                                      </button>
+                                      <button
+                                        onClick={() => handleUpdateOrderStatus(order.id, "Out for Delivery")}
+                                        className={`text-[11px] py-1.5 rounded-md font-semibold transition ${
+                                          order.status === "Out for Delivery" ? "bg-teal-600 text-white" : "bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50"
+                                        }`}
+                                      >
+                                        Out / Delivery
+                                      </button>
+                                      <button
+                                        onClick={() => handleUpdateOrderStatus(order.id, "Delivered")}
+                                        className={`text-[11px] py-1.5 rounded-md font-semibold transition ${
+                                          order.status === "Delivered" ? "bg-emerald-600 text-white" : "bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50"
+                                        }`}
+                                      >
+                                        Delivered
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex justify-between items-center pt-2 border-t border-amber-100">
+                                <button
+                                  onClick={() => handleUpdateOrderStatus(order.id, "Cancelled")}
+                                  className="text-[10px] text-rose-600 hover:text-rose-700 font-bold transition uppercase cursor-pointer"
+                                >
+                                  Cancel Order
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteOrder(order.id)}
+                                  className="text-neutral-400 hover:text-rose-600 transition-colors cursor-pointer flex items-center justify-center"
+                                  title="Delete Record"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
             </div>
           )}
 
