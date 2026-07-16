@@ -609,6 +609,91 @@ app.delete("/api/products/:id", async (req, res) => {
   }
 });
 
+// CAROUSEL ENDPOINTS
+const LOCAL_CAROUSEL_PATH = path.join(process.cwd(), "data_carousel.json");
+let localCarouselInMemory: any[] = [];
+
+function getCarouselDbPath(): string {
+  if (isServerless) {
+    return path.join("/tmp", "data_carousel.json");
+  }
+  return LOCAL_CAROUSEL_PATH;
+}
+
+const DEFAULT_CAROUSEL_ITEMS = [
+  {
+    id: "default-suya",
+    name: "Authentic Chicken Suya",
+    price: 9000,
+    image_url: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800",
+    category: "Chicken",
+    description: "Tender boneless chicken thigh pieces seasoned in spicy roasted peanut rub (yaji spice) and smoked over red-hot charcoal, served with fresh sliced red onions, cabbage, and extra yaji."
+  },
+  {
+    id: "default-burger",
+    name: "Double Grilled Chicken Burger",
+    price: 10500,
+    image_url: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80&w=800",
+    category: "Burgers",
+    description: "Juicy double-stacked grilled chicken breast patties, melted cheddar cheese, fresh lettuce, sliced tomatoes, caramelized onions, and our signature burger sauce on a toasted brioche bun."
+  },
+  {
+    id: "default-wrap",
+    name: "Spicy Beef Shawarma Wrap",
+    price: 8500,
+    image_url: "https://images.unsplash.com/photo-1608897013039-887f21d8c804?auto=format&fit=crop&q=80&w=800",
+    category: "Shawarma",
+    description: "Premium sliced flank beef slow-roasted and marinated in authentic Middle Eastern spices, wrapped in toasted pita with French fries, pickled cucumbers, cabbage salad, and garlic tahini sauce."
+  }
+];
+
+function readLocalCarousel(): any[] {
+  try {
+    const dbPath = getCarouselDbPath();
+    if (!fs.existsSync(dbPath)) {
+      try {
+        fs.writeFileSync(dbPath, JSON.stringify(DEFAULT_CAROUSEL_ITEMS, null, 2), "utf-8");
+      } catch (writeErr) {
+        console.warn("Could not write initial local carousel file, using memory fallback:", writeErr);
+      }
+      return DEFAULT_CAROUSEL_ITEMS;
+    }
+    const data = fs.readFileSync(dbPath, "utf-8");
+    const parsed = JSON.parse(data);
+    localCarouselInMemory = parsed;
+    return parsed;
+  } catch (error) {
+    console.error("Error reading local carousel:", error);
+    return DEFAULT_CAROUSEL_ITEMS;
+  }
+}
+
+function writeLocalCarousel(carousel: any[]) {
+  localCarouselInMemory = carousel;
+  try {
+    const dbPath = getCarouselDbPath();
+    fs.writeFileSync(dbPath, JSON.stringify(carousel, null, 2), "utf-8");
+  } catch (error) {
+    console.error("Error writing local carousel:", error);
+  }
+}
+
+// GET carousel items
+app.get("/api/carousel", (req, res) => {
+  const carousel = readLocalCarousel();
+  res.json({ carousel });
+});
+
+// POST - Update entire carousel configuration
+app.post("/api/carousel", (req, res) => {
+  const { carousel } = req.body || {};
+  if (!Array.isArray(carousel)) {
+    return res.status(400).json({ success: false, error: "Carousel must be an array of products." });
+  }
+  writeLocalCarousel(carousel);
+  res.json({ success: true, carousel });
+});
+
 // ORDERS ENDPOINTS
 
 // GET - Retrieve all orders

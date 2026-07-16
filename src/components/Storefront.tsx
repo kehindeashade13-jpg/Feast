@@ -62,35 +62,49 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
   // Categories list
   const categories = ["All", "Burgers", "Shawarma", "Chicken", "Sides", "Drinks"];
 
-  // Chef's special carousel list
-  const chefSpecialItems = initialProducts && initialProducts.length > 0 
-    ? initialProducts 
-    : [
-        {
-          id: "default-suya",
-          name: "Authentic Chicken Suya",
-          price: 9000,
-          image_url: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800",
-          category: "Chicken",
-          description: "Tender boneless chicken thigh pieces seasoned in spicy roasted peanut rub (yaji spice) and smoked over red-hot charcoal, served with fresh sliced red onions, cabbage, and extra yaji."
-        },
-        {
-          id: "default-burger",
-          name: "Double Grilled Chicken Burger",
-          price: 10500,
-          image_url: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80&w=800",
-          category: "Burgers",
-          description: "Juicy double-stacked grilled chicken breast patties, melted cheddar cheese, fresh lettuce, sliced tomatoes, caramelized onions, and our signature burger sauce on a toasted brioche bun."
-        },
-        {
-          id: "default-wrap",
-          name: "Spicy Beef Shawarma Wrap",
-          price: 8500,
-          image_url: "https://images.unsplash.com/photo-1608897013039-887f21d8c804?auto=format&fit=crop&q=80&w=800",
-          category: "Shawarma",
-          description: "Premium sliced flank beef slow-roasted and marinated in authentic Middle Eastern spices, wrapped in toasted pita with French fries, pickled cucumbers, cabbage salad, and garlic tahini sauce."
+  const [carouselItems, setCarouselItems] = useState<any[]>([]);
+
+  // Fetch carousel items on mount
+  useEffect(() => {
+    fetch("/api/carousel")
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.carousel) {
+          setCarouselItems(data.carousel);
         }
-      ];
+      })
+      .catch(err => console.error("Error fetching carousel:", err));
+  }, []);
+
+  const defaultCarouselItems = [
+    {
+      id: "default-suya",
+      name: "Authentic Chicken Suya",
+      price: 9000,
+      image_url: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800",
+      category: "Chicken",
+      description: "Tender boneless chicken thigh pieces seasoned in spicy roasted peanut rub (yaji spice) and smoked over red-hot charcoal, served with fresh sliced red onions, cabbage, and extra yaji."
+    },
+    {
+      id: "default-burger",
+      name: "Double Grilled Chicken Burger",
+      price: 10500,
+      image_url: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80&w=800",
+      category: "Burgers",
+      description: "Juicy double-stacked grilled chicken breast patties, melted cheddar cheese, fresh lettuce, sliced tomatoes, caramelized onions, and our signature burger sauce on a toasted brioche bun."
+    },
+    {
+      id: "default-wrap",
+      name: "Spicy Beef Shawarma Wrap",
+      price: 8500,
+      image_url: "https://images.unsplash.com/photo-1608897013039-887f21d8c804?auto=format&fit=crop&q=80&w=800",
+      category: "Shawarma",
+      description: "Premium sliced flank beef slow-roasted and marinated in authentic Middle Eastern spices, wrapped in toasted pita with French fries, pickled cucumbers, cabbage salad, and garlic tahini sauce."
+    }
+  ];
+
+  // Chef's special carousel list
+  const chefSpecialItems = carouselItems.length > 0 ? carouselItems : defaultCarouselItems;
 
   const [currentChefSpecialIndex, setCurrentChefSpecialIndex] = useState(0);
 
@@ -98,7 +112,7 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
     if (chefSpecialItems.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentChefSpecialIndex((prev) => (prev + 1) % chefSpecialItems.length);
-    }, 4500); // rotate every 4.5 seconds
+    }, 5000); // rotate every 5 seconds
     return () => clearInterval(interval);
   }, [chefSpecialItems.length]);
 
@@ -271,11 +285,42 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
     }
   };
 
+  // Intelligent category matcher for singular/plural/substring mappings
+  const isProductInCategory = (productCategory: string, productName: string, targetCategory: string): boolean => {
+    const pc = (productCategory || "").toLowerCase();
+    const tc = (targetCategory || "").toLowerCase();
+    const pn = (productName || "").toLowerCase();
+
+    if (tc === "all") return true;
+
+    if (tc === "burgers" || tc === "burger") {
+      return pc.includes("burger") || pn.includes("burger");
+    }
+
+    if (tc === "shawarma" || tc === "shawarmas") {
+      return pc.includes("shawarma") || pn.includes("shawarma") || pc.includes("wrap") || pn.includes("wrap");
+    }
+
+    if (tc === "chicken") {
+      return pc.includes("chicken") || pc.includes("suya") || (pn.includes("chicken") && !pc.includes("burger") && !pn.includes("burger"));
+    }
+
+    if (tc === "sides") {
+      return pc.includes("sides") || pc.includes("side") || pc.includes("fries") || pn.includes("fries") || pc.includes("yam") || pn.includes("yam");
+    }
+
+    if (tc === "drinks") {
+      return pc.includes("drink") || pc.includes("drinks") || pc.includes("beverage") || pn.includes("drink") || pn.includes("juice") || pn.includes("soda") || pn.includes("coke") || pn.includes("water");
+    }
+
+    return pc.includes(tc) || tc.includes(pc);
+  };
+
   // Filtering products for storefront layout
   const filteredProducts = initialProducts.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           product.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "All" || product.category.toLowerCase() === selectedCategory.toLowerCase();
+    const matchesCategory = isProductInCategory(product.category, product.name, selectedCategory);
     return matchesSearch && matchesCategory;
   });
 
