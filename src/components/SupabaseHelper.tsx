@@ -22,10 +22,11 @@ create table public.products (
 -- 2. Optional: Insert some premium sample seed data with Naira pricing
 insert into public.products (name, description, price, category, image_url, stock)
 values 
-  ('Minimalist Mechanical Keyboard', 'A tenkeyless layout mechanical keyboard with tactile brown switches, sturdy aluminum frame, and warm-white LED backlighting.', 150000.00, 'Electronics', 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&q=80&w=800', 15),
-  ('Classic Leather Journal', 'Handcrafted genuine full-grain leather journal with 200 cream-colored lined pages, perfect for writing and planning.', 25000.00, 'Stationery', 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=800', 45),
-  ('Ceramic Pour-Over Coffee Dripper', 'Artisanal speckled ceramic coffee dripper designed to hold temperature and brew the perfect balanced, flavorful cup of coffee.', 35000.00, 'Kitchen', 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&q=80&w=800', 20),
-  ('Matte Black Travel Tumbler', 'Double-wall vacuum-insulated stainless steel travel mug that keeps your hot drinks hot for 12 hours and cold drinks cold for 24 hours.', 30000.00, 'Lifestyle', 'https://images.unsplash.com/photo-1577937927133-66ef06acdf18?auto=format&fit=crop&q=80&w=800', 60);
+  ('Double Grilled Chicken Burger', 'Juicy double-stacked grilled chicken breast patties, melted cheddar cheese, fresh lettuce, sliced tomatoes, caramelized onions, and our signature burger sauce on a toasted brioche bun.', 10500.00, 'Burger', 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80&w=800', 25),
+  ('Spicy Beef Shawarma Wrap', 'Premium sliced flank beef slow-roasted and marinated in authentic Middle Eastern spices, wrapped in toasted pita with French fries, pickled cucumbers, cabbage salad, and rich garlic tahini sauce.', 8500.00, 'Shawarma', 'https://images.unsplash.com/photo-1608897013039-887f21d8c804?auto=format&fit=crop&q=80&w=800', 50),
+  ('Authentic Smoked Chicken Suya', 'Tender boneless chicken thigh pieces seasoned in spicy roasted peanut rub (yaji spice) and smoked over red-hot charcoal, served with fresh sliced red onions, cabbage, and extra yaji.', 9000.00, 'Chicken Suya', 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800', 30),
+  ('Jumbo Chicken Suya Wrap', 'Toasted flatbread filled with juicy chopped chicken suya, shredded lettuce, tomatoes, sliced onions, and a splash of spicy yaji mayo dressing.', 7500.00, 'Chicken Suya', 'https://images.unsplash.com/photo-1642d8d3f63c800888?auto=format&fit=crop&q=80&w=800', 20),
+  ('Crispy Chicken Burger with Fries', 'Crispy golden buttermilk fried chicken breast, pickles, spicy coleslaw, and herb mayo in a toasted bun, served with a side of crispy French fries.', 11000.00, 'Burger', 'https://images.unsplash.com/photo-1525059696034-4967a8e1dca2?auto=format&fit=crop&q=80&w=800', 15);
 
 -- 3. Enable Row Level Security (RLS) & establish explicit policies for development & admin access
 alter table public.products enable row level security;

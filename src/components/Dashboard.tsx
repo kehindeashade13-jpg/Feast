@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { 
   Plus, Edit2, Trash2, Search, Filter, RefreshCw, LogOut, CheckCircle2,
   Database, AlertCircle, ShoppingBag, DollarSign, Package, Layers, Info, X,
-  UploadCloud, Image
+  UploadCloud, Image as ImageIcon
 } from "lucide-react";
 import { Product, AppConfig } from "../types";
 import { SupabaseHelper } from "./SupabaseHelper";
@@ -185,7 +185,7 @@ function ImagePicker({ value, onChange, label = "Product Image" }: ImagePickerPr
               </>
             ) : (
               <div className="text-center p-2">
-                <Image className="w-5 h-5 text-neutral-400 mx-auto mb-1" />
+                <ImageIcon className="w-5 h-5 text-neutral-400 mx-auto mb-1" />
                 <span className="text-[10px] text-neutral-400 font-medium">No Preview</span>
               </div>
             )}
@@ -238,7 +238,7 @@ function ImagePicker({ value, onChange, label = "Product Image" }: ImagePickerPr
               </>
             ) : (
               <div className="text-center p-2">
-                <Image className="w-5 h-5 text-neutral-400 mx-auto mb-1" />
+                <ImageIcon className="w-5 h-5 text-neutral-400 mx-auto mb-1" />
                 <span className="text-[10px] text-neutral-400 font-medium">No Preview</span>
               </div>
             )}
@@ -299,59 +299,59 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
     description: "",
     price: "",
     stock: "",
-    category: "Electronics",
+    category: "Shawarma",
     image_url: ""
   });
 
   const getLocalSeedProducts = (): Product[] => [
     {
       id: "prod-1",
-      name: "Minimalist Mechanical Keyboard",
-      description: "A tenkeyless layout mechanical keyboard with tactile brown switches, sturdy aluminum frame, and warm-white LED backlighting.",
-      price: 150000.00,
-      category: "Electronics",
-      image_url: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&q=80&w=800",
-      stock: 15,
+      name: "Double Grilled Chicken Burger",
+      description: "Juicy double-stacked grilled chicken breast patties, melted cheddar cheese, fresh lettuce, sliced tomatoes, caramelized onions, and our signature burger sauce on a toasted brioche bun.",
+      price: 10500.00,
+      category: "Burger",
+      image_url: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80&w=800",
+      stock: 25,
       created_at: new Date().toISOString()
     },
     {
       id: "prod-2",
-      name: "Classic Leather Journal",
-      description: "Handcrafted genuine full-grain leather journal with 200 cream-colored lined pages, perfect for writing and planning.",
-      price: 25000.00,
-      category: "Stationery",
-      image_url: "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=800",
-      stock: 45,
+      name: "Spicy Beef Shawarma Wrap",
+      description: "Premium sliced flank beef slow-roasted and marinated in authentic Middle Eastern spices, wrapped in toasted pita with French fries, pickled cucumbers, cabbage salad, and rich garlic tahini sauce.",
+      price: 8500.00,
+      category: "Shawarma",
+      image_url: "https://images.unsplash.com/photo-1608897013039-887f21d8c804?auto=format&fit=crop&q=80&w=800",
+      stock: 50,
       created_at: new Date().toISOString()
     },
     {
       id: "prod-3",
-      name: "Ceramic Pour-Over Coffee Dripper",
-      description: "Artisanal speckled ceramic coffee dripper designed to hold temperature and brew the perfect balanced, flavorful cup of coffee.",
-      price: 35000.00,
-      category: "Kitchen",
-      image_url: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&q=80&w=800",
-      stock: 20,
+      name: "Authentic Smoked Chicken Suya",
+      description: "Tender boneless chicken thigh pieces seasoned in spicy roasted peanut rub (yaji spice) and smoked over red-hot charcoal, served with fresh sliced red onions, cabbage, and extra yaji.",
+      price: 9000.00,
+      category: "Chicken Suya",
+      image_url: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800",
+      stock: 30,
       created_at: new Date().toISOString()
     },
     {
       id: "prod-4",
-      name: "Matte Black Travel Tumbler",
-      description: "Double-wall vacuum-insulated stainless steel travel mug that keeps your hot drinks hot for 12 hours and cold drinks cold for 24 hours.",
-      price: 30000.00,
-      category: "Lifestyle",
-      image_url: "https://images.unsplash.com/photo-1577937927133-66ef06acdf18?auto=format&fit=crop&q=80&w=800",
-      stock: 60,
+      name: "Jumbo Chicken Suya Wrap",
+      description: "Toasted flatbread filled with juicy chopped chicken suya, shredded lettuce, tomatoes, sliced onions, and a splash of spicy yaji mayo dressing.",
+      price: 7500.00,
+      category: "Chicken Suya",
+      image_url: "https://images.unsplash.com/photo-1642d8d3f63c800888?auto=format&fit=crop&q=80&w=800",
+      stock: 20,
       created_at: new Date().toISOString()
     },
     {
       id: "prod-5",
-      name: "Ergonomic High-Back Office Chair",
-      description: "Premium desk chair featuring adjustable adaptive lumbar support, 3D multi-directional armrests, and breathable high-tension mesh back.",
-      price: 240000.00,
-      category: "Furniture",
-      image_url: "https://images.unsplash.com/photo-1505797149-43b0069ec26b?auto=format&fit=crop&q=80&w=800",
-      stock: 8,
+      name: "Crispy Chicken Burger with Fries",
+      description: "Crispy golden buttermilk fried chicken breast, pickles, spicy coleslaw, and herb mayo in a toasted bun, served with a side of crispy French fries.",
+      price: 11000.00,
+      category: "Burger",
+      image_url: "https://images.unsplash.com/photo-1525059696034-4967a8e1dca2?auto=format&fit=crop&q=80&w=800",
+      stock: 15,
       created_at: new Date().toISOString()
     }
   ];
@@ -444,7 +444,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
   };
 
   // Categories list computed dynamically + defaults
-  const categories = ["All", "Electronics", "Stationery", "Kitchen", "Lifestyle", "Furniture", "General"];
+  const categories = ["All", "Shawarma", "Burger", "Chicken Suya", "General"];
 
   // Filtered products list
   const filteredProducts = products.filter(product => {
@@ -488,7 +488,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
       description: "",
       price: "",
       stock: "",
-      category: "Electronics",
+      category: "Shawarma",
       image_url: ""
     });
   };
@@ -1056,11 +1056,9 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                       onChange={handleFormChange}
                       className="w-full px-3.5 py-2.5 bg-neutral-50 hover:bg-neutral-100/30 focus:bg-white text-sm border border-neutral-250 focus:border-neutral-900 rounded-xl outline-none transition"
                     >
-                      <option value="Electronics">Electronics</option>
-                      <option value="Stationery">Stationery</option>
-                      <option value="Kitchen">Kitchen</option>
-                      <option value="Lifestyle">Lifestyle</option>
-                      <option value="Furniture">Furniture</option>
+                      <option value="Shawarma">Shawarma</option>
+                      <option value="Burger">Burger</option>
+                      <option value="Chicken Suya">Chicken Suya</option>
                       <option value="General">General</option>
                     </select>
                   </div>
@@ -1212,11 +1210,9 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                       onChange={handleFormChange}
                       className="w-full px-3.5 py-2.5 bg-neutral-50 hover:bg-neutral-100/30 focus:bg-white text-sm border border-neutral-250 focus:border-neutral-900 rounded-xl outline-none transition"
                     >
-                      <option value="Electronics">Electronics</option>
-                      <option value="Stationery">Stationery</option>
-                      <option value="Kitchen">Kitchen</option>
-                      <option value="Lifestyle">Lifestyle</option>
-                      <option value="Furniture">Furniture</option>
+                      <option value="Shawarma">Shawarma</option>
+                      <option value="Burger">Burger</option>
+                      <option value="Chicken Suya">Chicken Suya</option>
                       <option value="General">General</option>
                     </select>
                   </div>

@@ -175,52 +175,52 @@ const LOCAL_DB_PATH = path.join(process.cwd(), "data_products.json");
 const SEED_PRODUCTS = [
   {
     id: "prod-1",
-    name: "Minimalist Mechanical Keyboard",
-    description: "A tenkeyless layout mechanical keyboard with tactile brown switches, sturdy aluminum frame, and warm-white LED backlighting.",
-    price: 150000.00,
-    category: "Electronics",
-    image_url: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&q=80&w=800",
-    stock: 15,
+    name: "Double Grilled Chicken Burger",
+    description: "Juicy double-stacked grilled chicken breast patties, melted cheddar cheese, fresh lettuce, sliced tomatoes, caramelized onions, and our signature burger sauce on a toasted brioche bun.",
+    price: 10500.00,
+    category: "Burger",
+    image_url: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80&w=800",
+    stock: 25,
     created_at: new Date().toISOString()
   },
   {
     id: "prod-2",
-    name: "Classic Leather Journal",
-    description: "Handcrafted genuine full-grain leather journal with 200 cream-colored lined pages, perfect for writing, sketching, and daily planning.",
-    price: 25000.00,
-    category: "Stationery",
-    image_url: "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=800",
-    stock: 45,
+    name: "Spicy Beef Shawarma Wrap",
+    description: "Premium sliced flank beef slow-roasted and marinated in authentic Middle Eastern spices, wrapped in toasted pita with French fries, pickled cucumbers, cabbage salad, and rich garlic tahini sauce.",
+    price: 8500.00,
+    category: "Shawarma",
+    image_url: "https://images.unsplash.com/photo-1608897013039-887f21d8c804?auto=format&fit=crop&q=80&w=800",
+    stock: 50,
     created_at: new Date().toISOString()
   },
   {
     id: "prod-3",
-    name: "Ceramic Pour-Over Coffee Dripper",
-    description: "Artisanal speckled ceramic coffee dripper designed to hold temperature and brew the perfect balanced, flavorful cup of coffee.",
-    price: 35000.00,
-    category: "Kitchen",
-    image_url: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&q=80&w=800",
-    stock: 20,
+    name: "Authentic Smoked Chicken Suya",
+    description: "Tender boneless chicken thigh pieces seasoned in spicy roasted peanut rub (yaji spice) and smoked over red-hot charcoal, served with fresh sliced red onions, cabbage, and extra yaji.",
+    price: 9000.00,
+    category: "Chicken Suya",
+    image_url: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800",
+    stock: 30,
     created_at: new Date().toISOString()
   },
   {
     id: "prod-4",
-    name: "Matte Black Travel Tumbler",
-    description: "Double-wall vacuum-insulated stainless steel travel mug that keeps your hot drinks hot for 12 hours and cold drinks cold for 24 hours.",
-    price: 30000.00,
-    category: "Lifestyle",
-    image_url: "https://images.unsplash.com/photo-1577937927133-66ef06acdf18?auto=format&fit=crop&q=80&w=800",
-    stock: 60,
+    name: "Jumbo Chicken Suya Wrap",
+    description: "Toasted flatbread filled with juicy chopped chicken suya, shredded lettuce, tomatoes, sliced onions, and a splash of spicy yaji mayo dressing.",
+    price: 7500.00,
+    category: "Chicken Suya",
+    image_url: "https://images.unsplash.com/photo-1642d8d3f63c800888?auto=format&fit=crop&q=80&w=800",
+    stock: 20,
     created_at: new Date().toISOString()
   },
   {
     id: "prod-5",
-    name: "Ergonomic High-Back Office Chair",
-    description: "Premium desk chair featuring adjustable adaptive lumbar support, 3D multi-directional armrests, and breathable high-tension mesh back.",
-    price: 240000.00,
-    category: "Furniture",
-    image_url: "https://images.unsplash.com/photo-1505797149-43b0069ec26b?auto=format&fit=crop&q=80&w=800",
-    stock: 8,
+    name: "Crispy Chicken Burger with Fries",
+    description: "Crispy golden buttermilk fried chicken breast, pickles, spicy coleslaw, and herb mayo in a toasted bun, served with a side of crispy French fries.",
+    price: 11000.00,
+    category: "Burger",
+    image_url: "https://images.unsplash.com/photo-1525059696034-4967a8e1dca2?auto=format&fit=crop&q=80&w=800",
+    stock: 15,
     created_at: new Date().toISOString()
   }
 ];
@@ -247,6 +247,19 @@ function readLocalProducts() {
     }
     const data = fs.readFileSync(dbPath, "utf-8");
     const parsed = JSON.parse(data);
+    
+    // Self-healing: Upgrade outdated category lists to the food theme automatically
+    if (parsed.some((p: any) => p.category === "Electronics" || p.category === "Stationery" || p.category === "Kitchen")) {
+      console.log("Outdated category found in local database file. Resetting to food theme products...");
+      try {
+        fs.writeFileSync(dbPath, JSON.stringify(SEED_PRODUCTS, null, 2), "utf-8");
+      } catch (writeErr) {
+        console.warn("Could not rewrite local products file:", writeErr);
+      }
+      localProductsInMemory = [...SEED_PRODUCTS];
+      return SEED_PRODUCTS;
+    }
+    
     localProductsInMemory = parsed;
     return parsed;
   } catch (error) {
