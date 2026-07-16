@@ -248,16 +248,36 @@ function readLocalProducts() {
     const data = fs.readFileSync(dbPath, "utf-8");
     const parsed = JSON.parse(data);
     
-    // Self-healing: Upgrade outdated category lists to the food theme automatically
-    if (parsed.some((p: any) => p.category === "Electronics" || p.category === "Stationery" || p.category === "Kitchen")) {
-      console.log("Outdated category found in local database file. Resetting to food theme products...");
+    // Self-healing: Upgrade outdated category lists to the food theme automatically without deleting user food products
+    if (parsed.some((p: any) => p.category === "Electronics" || p.category === "Stationery" || p.category === "Kitchen" || p.category === "Lifestyle" || p.category === "Furniture")) {
+      console.log("Outdated category found in local database file. Filtering out old items but retaining user custom food items...");
+      const cleanParsed = parsed.filter((p: any) => 
+        p.category !== "Electronics" && 
+        p.category !== "Stationery" && 
+        p.category !== "Kitchen" && 
+        p.category !== "Lifestyle" && 
+        p.category !== "Furniture"
+      );
+      
+      let finalProducts = cleanParsed;
+      if (cleanParsed.length === 0) {
+        finalProducts = [...SEED_PRODUCTS];
+      } else {
+        // Prepend seed products avoiding duplicates by name
+        SEED_PRODUCTS.forEach(seedP => {
+          if (!finalProducts.some((p: any) => p.name.toLowerCase() === seedP.name.toLowerCase())) {
+            finalProducts.push(seedP);
+          }
+        });
+      }
+      
       try {
-        fs.writeFileSync(dbPath, JSON.stringify(SEED_PRODUCTS, null, 2), "utf-8");
+        fs.writeFileSync(dbPath, JSON.stringify(finalProducts, null, 2), "utf-8");
       } catch (writeErr) {
         console.warn("Could not rewrite local products file:", writeErr);
       }
-      localProductsInMemory = [...SEED_PRODUCTS];
-      return SEED_PRODUCTS;
+      localProductsInMemory = finalProducts;
+      return finalProducts;
     }
     
     localProductsInMemory = parsed;

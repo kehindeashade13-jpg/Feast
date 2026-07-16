@@ -59,7 +59,7 @@ function ImagePicker({ value, onChange, label = "Product Image" }: ImagePickerPr
       setError("Please upload a valid image file (PNG, JPG, WEBP etc.)");
       return;
     }
-    // Limit to 10MB now that we auto-compress client-side
+    // Limit to 10MB
     if (file.size > 10 * 1024 * 1024) {
       setError("Image is too large. Must be smaller than 10MB.");
       return;
@@ -67,48 +67,9 @@ function ImagePicker({ value, onChange, label = "Product Image" }: ImagePickerPr
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      if (!e.target?.result) return;
-      
-      const img = new Image();
-      img.onload = () => {
-        // Create canvas for downscaling
-        const canvas = document.createElement("canvas");
-        const MAX_WIDTH = 800;
-        const MAX_HEIGHT = 800;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height = Math.round((height * MAX_WIDTH) / width);
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width = Math.round((width * MAX_HEIGHT) / height);
-            height = MAX_HEIGHT;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          // Export as compressed JPEG to dramatically save size and database payload
-          const compressedBase64 = canvas.toDataURL("image/jpeg", 0.75);
-          onChange(compressedBase64);
-        } else {
-          onChange(e.target!.result as string);
-        }
-      };
-
-      img.onerror = () => {
-        setError("Failed to process image.");
-      };
-
-      img.src = e.target.result as string;
+      if (e.target?.result) {
+        onChange(e.target.result as string);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -387,6 +348,32 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
             const productsData = await productsRes.json();
             loadedProducts = productsData.products || [];
             
+            // Restore any custom products uploaded/created by the user from localStorage
+            const localProductsStr = localStorage.getItem("local_products");
+            if (localProductsStr) {
+              try {
+                const localProducts: Product[] = JSON.parse(localProductsStr);
+                const customLocalProducts = localProducts.filter(p => p.image_url?.startsWith("data:image/") || !["prod-1", "prod-2", "prod-3", "prod-4", "prod-5"].includes(p.id));
+                if (customLocalProducts.length > 0) {
+                  const merged = [...loadedProducts];
+                  customLocalProducts.forEach(localP => {
+                    if (!merged.some(m => m.name.toLowerCase() === localP.name.toLowerCase() || m.id === localP.id)) {
+                      merged.unshift(localP);
+                      // Sync/persist back to the server
+                      fetch("/api/products", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(localP)
+                      }).catch(err => console.warn("Failed to sync custom product to server:", err));
+                    }
+                  });
+                  loadedProducts = merged;
+                }
+              } catch (e) {
+                // ignore
+              }
+            }
+            
             if (productsData.isFallback && productsData.error) {
               setDbError(productsData.error);
               setIsFallback(true);
@@ -509,7 +496,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
         price: parsePrice(formData.price),
         stock: Number(formData.stock) || 0,
         category: formData.category,
-        image_url: formData.image_url || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=800",
+        image_url: formData.image_url || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800",
         created_at: new Date().toISOString()
       };
       const updatedProducts = [newProduct, ...products];
@@ -923,7 +910,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                           className="w-full h-full object-cover group-hover:scale-102 transition duration-300"
                           onError={(e) => {
                             // fallback image
-                            (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=800";
+                            (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800";
                           }}
                         />
                       </div>
