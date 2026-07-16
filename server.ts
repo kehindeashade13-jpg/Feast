@@ -64,8 +64,8 @@ export function parsePrice(priceStr: any): number {
 export const app = express();
 const PORT = 3000;
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // URL normalization middleware for Serverless compatibility (Netlify / Vercel)
 app.use((req, res, next) => {

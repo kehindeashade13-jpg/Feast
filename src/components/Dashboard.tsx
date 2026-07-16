@@ -59,17 +59,56 @@ function ImagePicker({ value, onChange, label = "Product Image" }: ImagePickerPr
       setError("Please upload a valid image file (PNG, JPG, WEBP etc.)");
       return;
     }
-    // Limit to 2.5MB to keep Base64 strings reasonable
-    if (file.size > 2.5 * 1024 * 1024) {
-      setError("Image is too large. Must be smaller than 2.5MB.");
+    // Limit to 10MB now that we auto-compress client-side
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Image is too large. Must be smaller than 10MB.");
       return;
     }
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      if (e.target?.result) {
-        onChange(e.target.result as string);
-      }
+      if (!e.target?.result) return;
+      
+      const img = new Image();
+      img.onload = () => {
+        // Create canvas for downscaling
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width = Math.round((width * MAX_HEIGHT) / height);
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          // Export as compressed JPEG to dramatically save size and database payload
+          const compressedBase64 = canvas.toDataURL("image/jpeg", 0.75);
+          onChange(compressedBase64);
+        } else {
+          onChange(e.target!.result as string);
+        }
+      };
+
+      img.onerror = () => {
+        setError("Failed to process image.");
+      };
+
+      img.src = e.target.result as string;
     };
     reader.readAsDataURL(file);
   };
@@ -170,7 +209,7 @@ function ImagePicker({ value, onChange, label = "Product Image" }: ImagePickerPr
                 {isDragActive ? "Drop the image here" : "Drag & drop your product image"}
               </p>
               <p className="text-[10px] text-neutral-400 mt-1">
-                or click to browse local files (Max 2.5MB)
+                or click to browse local files (Max 10MB, auto-optimized)
               </p>
               <input
                 id={`file-picker-${label.replace(/\s+/g, "-")}`}
