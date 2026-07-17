@@ -206,6 +206,50 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
 
   const deliveryFee = 1500; // Fixed delivery fee ₦1,500 inside Nigeria
 
+  const getWhatsAppUrl = (order: any) => {
+    if (!order) return "";
+    const adminPhone = "2348066482553";
+    const orderNum = order.order_number || "";
+    
+    const orderItems = Array.isArray(order.items) ? order.items : [];
+    
+    const itemsText = orderItems.map((item: any) => {
+      const sizeStr = item.customizations?.size ? ` (Size: ${item.customizations.size})` : "";
+      const extrasList = item.customizations?.extras || [];
+      const extrasStr = extrasList.length > 0 ? `\n  ➕ Extras: ${extrasList.join(", ")}` : "";
+      const notesStr = item.customizations?.notes ? `\n  📝 Notes: ${item.customizations.notes}` : "";
+      const price = Number(item.price) || 0;
+      const quantity = Number(item.quantity) || 1;
+      const totalItemPrice = price * quantity;
+      return `• *${quantity}x ${item.name}*${sizeStr}${extrasStr}${notesStr}\n  💰 Price: ₦${totalItemPrice.toLocaleString()}`;
+    }).join("\n\n");
+
+    const messageText = `🍔 *NEW CHICKENFEAST.NG ORDER!* 🍟\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `🆔 *Order Code:* ${orderNum}\n\n` +
+      `👤 *Customer Details:*\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `• *Name:* ${order.customer_name}\n` +
+      `• *Phone:* ${order.customer_phone}\n` +
+      `• *Email:* ${order.customer_email || "Not provided"}\n` +
+      `• *Delivery Address:* ${order.delivery_address}\n` +
+      `• *Special Instructions:* ${order.delivery_instructions || "None"}\n` +
+      `• *Payment Method:* ${order.payment_method}\n\n` +
+      `🛒 *Items Ordered:*\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `${itemsText || "No items details"}\n\n` +
+      `📊 *Financial Summary:*\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `• *Subtotal:* ₦${(Number(order.total_price) - deliveryFee).toLocaleString()}\n` +
+      `• *Delivery Fee:* ₦${deliveryFee.toLocaleString()}\n` +
+      `• *Grand Total:* ₦${Number(order.total_price).toLocaleString()}\n\n` +
+      `🔗 *Track Order:* ${window.location.origin}/?tab=track&code=${orderNum}\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `Please confirm my order. Thank you!`;
+
+    return `https://wa.me/${adminPhone}?text=${encodeURIComponent(messageText)}`;
+  };
+
   // Place Order API Submission
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -244,6 +288,12 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
         setPlacedOrder(data.order);
         saveCart([]); // clear cart
         setIsCheckoutOpen(false);
+
+        // Auto redirect to WhatsApp
+        const waUrl = getWhatsAppUrl(data.order);
+        if (waUrl) {
+          window.location.href = waUrl;
+        }
       } else {
         alert(data.error || "Failed to submit order. Please try again.");
       }
@@ -1630,27 +1680,38 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
                 </div>
               </div>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setTrackOrderNumber(placedOrder.order_number);
-                    setSearchedOrder(placedOrder);
-                    setPlacedOrder(null);
-                    setActiveTab("track");
-                  }}
-                  className="flex-1 bg-amber-400 hover:bg-amber-500 text-black font-extrabold text-xs py-3.5 rounded-xl uppercase transition cursor-pointer border border-amber-300"
+              <div className="space-y-3">
+                <a
+                  href={getWhatsAppUrl(placedOrder)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs py-4 rounded-xl uppercase transition cursor-pointer flex items-center justify-center gap-2 shadow-lg border border-emerald-400"
                 >
-                  Track Live Status
-                </button>
-                <button
-                  onClick={() => {
-                    setPlacedOrder(null);
-                    setActiveTab("home");
-                  }}
-                  className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-extrabold text-xs py-3.5 rounded-xl uppercase transition border border-neutral-700 cursor-pointer"
-                >
-                  Return Home
-                </button>
+                  <MessageCircle className="w-5 h-5 fill-white/10" /> Chat on WhatsApp to Confirm Order
+                </a>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setTrackOrderNumber(placedOrder.order_number);
+                      setSearchedOrder(placedOrder);
+                      setPlacedOrder(null);
+                      setActiveTab("track");
+                    }}
+                    className="flex-1 bg-amber-400 hover:bg-amber-500 text-black font-extrabold text-xs py-3.5 rounded-xl uppercase transition cursor-pointer border border-amber-300"
+                  >
+                    Track Live Status
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPlacedOrder(null);
+                      setActiveTab("home");
+                    }}
+                    className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-extrabold text-xs py-3.5 rounded-xl uppercase transition border border-neutral-700 cursor-pointer"
+                  >
+                    Return Home
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
