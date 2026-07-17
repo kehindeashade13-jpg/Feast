@@ -4,6 +4,7 @@ import fs from "fs";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
+import crypto from "crypto";
 
 dotenv.config();
 
@@ -767,7 +768,15 @@ app.get("/api/orders", async (req, res) => {
         const orders = readLocalOrders();
         return res.json({ success: true, orders, isFallback: true, error: error.message });
       }
-      return res.json({ success: true, orders: data || [], isFallback: false });
+      
+      const mappedOrders = (data || []).map((item: any) => ({
+        ...item,
+        order_number: item.order_number || item.id,
+        delivery_address: item.delivery_address || item.customer_address || "",
+        delivery_instructions: item.delivery_instructions || item.notes || "",
+        total_price: item.total_price || item.total || 0
+      }));
+      return res.json({ success: true, orders: mappedOrders, isFallback: false });
     } catch (err: any) {
       console.error("Supabase orders fetch crash:", err);
       const orders = readLocalOrders();
@@ -776,6 +785,83 @@ app.get("/api/orders", async (req, res) => {
   } else {
     const orders = readLocalOrders();
     return res.json({ success: true, orders, isFallback: true });
+  }
+});
+
+// GET - Track a single order by number or ID
+app.get("/api/orders/track", async (req, res) => {
+  const { number } = req.query;
+  if (!number) {
+    return res.status(400).json({ success: false, error: "Order tracking code/number is required." });
+  }
+
+  const numStr = String(number).trim();
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      // 1. Check if the code is a valid UUID
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(numStr);
+      if (isUuid) {
+        const { data, error } = await supabase
+          .from("orders")
+          .select("*")
+          .eq("id", numStr)
+          .maybeSingle();
+
+        if (data) {
+          const mappedOrder = {
+            ...data,
+            order_number: data.order_number || data.id,
+            delivery_address: data.delivery_address || data.customer_address || "",
+            delivery_instructions: data.delivery_instructions || data.notes || "",
+            total_price: data.total_price || data.total || 0
+          };
+          return res.json({ success: true, order: mappedOrder });
+        }
+      }
+
+      // 2. Otherwise try searching by order_number column
+      const { data: dataByNum, error: errorByNum } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("order_number", numStr)
+        .maybeSingle();
+
+      if (dataByNum) {
+        const mappedOrder = {
+          ...dataByNum,
+          order_number: dataByNum.order_number || dataByNum.id,
+          delivery_address: dataByNum.delivery_address || dataByNum.customer_address || "",
+          delivery_instructions: dataByNum.delivery_instructions || dataByNum.notes || "",
+          total_price: dataByNum.total_price || dataByNum.total || 0
+        };
+        return res.json({ success: true, order: mappedOrder });
+      }
+
+      // 3. Local fallback search
+      const orders = readLocalOrders();
+      const localOrder = orders.find((o: any) => o.order_number === numStr || o.id === numStr);
+      if (localOrder) {
+        return res.json({ success: true, order: localOrder });
+      }
+
+      return res.status(404).json({ success: false, error: "Order not found." });
+    } catch (err: any) {
+      console.error("Supabase track order error:", err);
+      const orders = readLocalOrders();
+      const localOrder = orders.find((o: any) => o.order_number === numStr || o.id === numStr);
+      if (localOrder) {
+        return res.json({ success: true, order: localOrder });
+      }
+      return res.status(404).json({ success: false, error: "Order not found." });
+    }
+  } else {
+    const orders = readLocalOrders();
+    const localOrder = orders.find((o: any) => o.order_number === numStr || o.id === numStr);
+    if (localOrder) {
+      return res.json({ success: true, order: localOrder });
+    }
+    return res.status(404).json({ success: false, error: "Order not found." });
   }
 });
 
@@ -813,8 +899,34 @@ app.post("/api/orders", async (req, res) => {
 
   if (isSupabaseConfigured && supabase) {
     try {
-      let dbOrder: any = { ...newOrder };
-      delete dbOrder.id; // Let Supabase handle the UUID
+      const deliveryFee = 1500;
+      const parsedTotalPrice = Number(total_price) || 0;
+      const subtotalVal = parsedTotalPrice > deliveryFee ? parsedTotalPrice - deliveryFee : 0;
+
+      let dbOrder: any = {
+        // --- DEFAULT SCHEMA FIELDS ---
+        id: crypto.randomUUID(), // Always generate a valid UUID for id to prevent not-null constraints
+        order_number,
+        customer_name: customer_name || "Guest Customer",
+        customer_phone: customer_phone || "",
+        customer_email: customer_email || "",
+        delivery_address: delivery_address || "",
+        delivery_instructions: delivery_instructions || "",
+        items: typeof items === "string" ? JSON.parse(items) : (items || []),
+        total_price: parsedTotalPrice,
+        payment_method: payment_method || "Cash on Delivery",
+        status: status || "Pending",
+        created_at: new Date().toISOString(),
+
+        // --- CUSTOM SCHEMA FIELDS (Mapped) ---
+        customer_address: delivery_address || "",
+        notes: delivery_instructions || "",
+        timestamp: new Date().toISOString(),
+        subtotal: subtotalVal,
+        delivery_fee: deliveryFee,
+        discount: 0,
+        total: parsedTotalPrice
+      };
 
       let data: any = null;
       let error: any = null;
@@ -865,7 +977,9 @@ app.post("/api/orders", async (req, res) => {
             console.warn(`Self-healing database insert: Column "${notNullCol}" violates NOT NULL constraint. Providing default and retrying...`);
             if (notNullCol === "items") {
               dbOrder[notNullCol] = [];
-            } else if (notNullCol === "total_price" || notNullCol === "price" || notNullCol === "stock") {
+            } else if (notNullCol === "id") {
+              dbOrder[notNullCol] = crypto.randomUUID();
+            } else if (/price|amount|fee|cost|subtotal|total|discount|stock|qty|quantity/i.test(notNullCol)) {
               dbOrder[notNullCol] = 0;
             } else {
               dbOrder[notNullCol] = "";
@@ -886,7 +1000,19 @@ app.post("/api/orders", async (req, res) => {
         writeLocalOrders(orders);
         return res.json({ success: true, order: newOrder, isFallback: true, error: error.message });
       }
-      return res.json({ success: true, order: data?.[0] || newOrder, isFallback: false });
+
+      if (data && data[0]) {
+        const returnedRow = data[0];
+        const mappedOrder = {
+          ...returnedRow,
+          order_number: returnedRow.order_number || returnedRow.id,
+          delivery_address: returnedRow.delivery_address || returnedRow.customer_address || "",
+          delivery_instructions: returnedRow.delivery_instructions || returnedRow.notes || "",
+          total_price: returnedRow.total_price || returnedRow.total || 0
+        };
+        return res.json({ success: true, order: mappedOrder, isFallback: false });
+      }
+      return res.json({ success: true, order: newOrder, isFallback: false });
     } catch (err: any) {
       console.error("Supabase insert order crash:", err);
       newOrder.id = `order-${Date.now()}`;
@@ -953,6 +1079,18 @@ app.put("/api/orders/:id/status", async (req, res) => {
           return res.json({ success: true, order: orders[idx], isFallback: true });
         }
         return res.status(404).json({ success: false, error: "Order not found." });
+      }
+
+      if (data && data[0]) {
+        const returnedRow = data[0];
+        const mappedOrder = {
+          ...returnedRow,
+          order_number: returnedRow.order_number || returnedRow.id,
+          delivery_address: returnedRow.delivery_address || returnedRow.customer_address || "",
+          delivery_instructions: returnedRow.delivery_instructions || returnedRow.notes || "",
+          total_price: returnedRow.total_price || returnedRow.total || 0
+        };
+        return res.json({ success: true, order: mappedOrder, isFallback: false });
       }
 
       return res.json({ success: true, order: data[0], isFallback: false });
