@@ -26,9 +26,40 @@ interface StorefrontProps {
   loadingProducts: boolean;
 }
 
+const getLocalOrdersFromStorage = (): any[] => {
+  try {
+    const saved = localStorage.getItem("chickenfeast_local_orders");
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+const saveLocalOrderToStorage = (order: any) => {
+  try {
+    const orders = getLocalOrdersFromStorage();
+    const exists = orders.some((o: any) => o.order_number === order.order_number || o.id === order.id);
+    if (!exists) {
+      orders.unshift(order);
+      localStorage.setItem("chickenfeast_local_orders", JSON.stringify(orders));
+    }
+  } catch (e) {
+    console.error("Error saving order to localStorage:", e);
+  }
+};
+
 export function Storefront({ onGoToAdmin, products: initialProducts, loadingProducts }: StorefrontProps) {
-  // Navigation & tabs
-  const [activeTab, setActiveTab] = useState<"home" | "menu" | "track" | "about">("home");
+  // Navigation & tabs - parse from URL if available (e.g., from WhatsApp tracking link)
+  const [activeTab, setActiveTab] = useState<"home" | "menu" | "track" | "about">(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      if (tab === "track" || tab === "menu" || tab === "about") {
+        return tab as any;
+      }
+    } catch (e) {}
+    return "home";
+  });
   
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,12 +85,66 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
   const [paymentMethod, setPaymentMethod] = useState("Cash on Delivery");
   const [submittingOrder, setSubmittingOrder] = useState(false);
 
-  // Order confirmation & tracking
+  // Order confirmation & tracking - prefill search code from URL if provided
   const [placedOrder, setPlacedOrder] = useState<any | null>(null);
-  const [trackOrderNumber, setTrackOrderNumber] = useState("");
+  const [trackOrderNumber, setTrackOrderNumber] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("code") || "";
+    } catch (e) {}
+    return "";
+  });
   const [searchedOrder, setSearchedOrder] = useState<any | null>(null);
   const [searchingOrder, setSearchingOrder] = useState(false);
   const [trackError, setTrackError] = useState("");
+
+  // Automatically track on load if code is in the URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const tab = params.get("tab");
+    if (tab === "track" && code) {
+      const fetchOrder = async () => {
+        setSearchingOrder(true);
+        setTrackError("");
+        setSearchedOrder(null);
+        try {
+          const res = await fetch(`/api/orders/track?number=${encodeURIComponent(code.trim())}`);
+          if (!res.ok) {
+            throw new Error(`Server status: ${res.status}`);
+          }
+          const contentType = res.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+            throw new Error("Response is not JSON.");
+          }
+          const data = await res.json();
+          if (data.success && data.order) {
+            setSearchedOrder(data.order);
+          } else {
+            const localOrders = getLocalOrdersFromStorage();
+            const foundLocal = localOrders.find((o: any) => o.order_number === code.trim() || o.id === code.trim());
+            if (foundLocal) {
+              setSearchedOrder(foundLocal);
+            } else {
+              setTrackError(data.error || "Order not found. Please verify the code.");
+            }
+          }
+        } catch (err) {
+          console.warn("API tracking failed on mount, loading from local storage:", err);
+          const localOrders = getLocalOrdersFromStorage();
+          const foundLocal = localOrders.find((o: any) => o.order_number === code.trim() || o.id === code.trim());
+          if (foundLocal) {
+            setSearchedOrder(foundLocal);
+          } else {
+            setTrackError("Order not found in cloud database or local storage.");
+          }
+        } finally {
+          setSearchingOrder(false);
+        }
+      };
+      fetchOrder();
+    }
+  }, []);
 
   // Categories list
   const categories = ["All", "Burgers", "Shawarma", "Chicken", "Sides", "Drinks"];
@@ -283,9 +368,20 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderPayload)
       });
+      
+      if (!res.ok) {
+        throw new Error(`Server status: ${res.status}`);
+      }
+
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Expected JSON response but received another content type. SPA routing fallback.");
+      }
+
       const data = await res.json();
-      if (data.success) {
+      if (data && data.success) {
         setPlacedOrder(data.order);
+        saveLocalOrderToStorage(data.order);
         saveCart([]); // clear cart
         setIsCheckoutOpen(false);
 
@@ -295,11 +391,45 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
           window.location.href = waUrl;
         }
       } else {
-        alert(data.error || "Failed to submit order. Please try again.");
+        throw new Error(data?.error || "Failed to submit order.");
       }
     } catch (err) {
-      console.error("Order submission failed:", err);
-      alert("Error connecting to server. Please try again.");
+      console.warn("API order placement failed, falling back to local storage and direct WhatsApp redirection:", err);
+      
+      const localOrderNum = `CF-${Math.floor(100000 + Math.random() * 900000)}`;
+      const offlineOrder = {
+        id: `local-${Date.now()}`,
+        order_number: localOrderNum,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        customer_email: customerEmail,
+        delivery_address: deliveryAddress,
+        delivery_instructions: deliveryInstructions,
+        payment_method: paymentMethod,
+        items: cart.map(item => ({
+          id: item.product.id,
+          name: item.product.name,
+          quantity: item.quantity,
+          price: item.product.price + item.customizations.extraCost,
+          customizations: item.customizations
+        })),
+        total_price: getCartTotal() + deliveryFee,
+        status: "Pending",
+        created_at: new Date().toISOString()
+      };
+
+      // Save client side local order
+      saveLocalOrderToStorage(offlineOrder);
+
+      setPlacedOrder(offlineOrder);
+      saveCart([]); // clear cart
+      setIsCheckoutOpen(false);
+
+      // Auto redirect to WhatsApp
+      const waUrl = getWhatsAppUrl(offlineOrder);
+      if (waUrl) {
+        window.location.href = waUrl;
+      }
     } finally {
       setSubmittingOrder(false);
     }
@@ -308,23 +438,46 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
   // Live order search
   const handleTrackOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!trackOrderNumber.trim()) return;
+    const queryStr = trackOrderNumber.trim();
+    if (!queryStr) return;
 
     setSearchingOrder(true);
     setTrackError("");
     setSearchedOrder(null);
 
     try {
-      const res = await fetch(`/api/orders/track?number=${encodeURIComponent(trackOrderNumber.trim())}`);
+      const res = await fetch(`/api/orders/track?number=${encodeURIComponent(queryStr)}`);
+      if (!res.ok) {
+        throw new Error(`Server returned status ${res.status}`);
+      }
+
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Response is not JSON. SPA fallback routing active.");
+      }
+
       const data = await res.json();
       if (data.success && data.order) {
         setSearchedOrder(data.order);
       } else {
-        setTrackError(data.error || "Order not found. Check the order number.");
+        // Fallback to client-side order storage search
+        const localOrders = getLocalOrdersFromStorage();
+        const foundLocal = localOrders.find((o: any) => o.order_number === queryStr || o.id === queryStr);
+        if (foundLocal) {
+          setSearchedOrder(foundLocal);
+        } else {
+          setTrackError(data.error || "Order not found. Check the order number.");
+        }
       }
     } catch (err) {
-      console.error("Tracking request failed:", err);
-      setTrackError("Error reaching server. Please check your network.");
+      console.error("Tracking request failed, loading local storage:", err);
+      const localOrders = getLocalOrdersFromStorage();
+      const foundLocal = localOrders.find((o: any) => o.order_number === queryStr || o.id === queryStr);
+      if (foundLocal) {
+        setSearchedOrder(foundLocal);
+      } else {
+        setTrackError("Order not found in cloud database or local storage cache.");
+      }
     } finally {
       setSearchingOrder(false);
     }
