@@ -1113,6 +1113,22 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
 
         </div>
 
+        {/* Trust elements inside footer */}
+        <div className="max-w-7xl mx-auto border-t border-b border-neutral-800/80 py-6 my-8 grid grid-cols-3 gap-4 text-center">
+          <div>
+            <span className="block font-sans font-black text-lg text-white sm:text-xl">100%</span>
+            <span className="text-[10px] text-neutral-400 uppercase tracking-widest font-semibold">Premium Quality</span>
+          </div>
+          <div>
+            <span className="block font-sans font-black text-lg text-white sm:text-xl">&lt; 35m</span>
+            <span className="text-[10px] text-neutral-400 uppercase tracking-widest font-semibold">Express Delivery</span>
+          </div>
+          <div>
+            <span className="block font-sans font-black text-lg text-white sm:text-xl">4.9 ★</span>
+            <span className="text-[10px] text-neutral-400 uppercase tracking-widest font-semibold">Customer Rating</span>
+          </div>
+        </div>
+
         {/* Footer bottom bar */}
         <div className="max-w-7xl mx-auto border-t border-neutral-850 pt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex flex-wrap gap-4 text-neutral-400 font-semibold justify-center sm:justify-start">

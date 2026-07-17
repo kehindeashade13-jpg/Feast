@@ -1675,6 +1675,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                                   updated[idx] = updated[idx - 1];
                                   updated[idx - 1] = temp;
                                   setCarouselItems(updated);
+                                  saveCarousel(updated);
                                 }}
                                 className="p-1.5 hover:bg-neutral-100 text-neutral-500 hover:text-neutral-900 rounded-lg disabled:opacity-30 transition cursor-pointer font-bold"
                                 title="Move Up"
@@ -1689,6 +1690,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                                   updated[idx] = updated[idx + 1];
                                   updated[idx + 1] = temp;
                                   setCarouselItems(updated);
+                                  saveCarousel(updated);
                                 }}
                                 className="p-1.5 hover:bg-neutral-100 text-neutral-500 hover:text-neutral-900 rounded-lg disabled:opacity-30 transition cursor-pointer font-bold"
                                 title="Move Down"
@@ -1704,8 +1706,9 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                               </button>
                               <button
                                 onClick={() => {
-                                  setCarouselItems(prev => prev.filter(p => p.id !== item.id));
-                                  showToast("Removed slide from carousel. Don't forget to save changes!", "info");
+                                  const updated = carouselItems.filter(p => p.id !== item.id);
+                                  setCarouselItems(updated);
+                                  saveCarousel(updated);
                                 }}
                                 className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition cursor-pointer"
                                 title="Remove slide"
@@ -1770,8 +1773,9 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                                   category: product.category,
                                   image_url: product.image_url
                                 };
-                                setCarouselItems(prev => [...prev, newSlide]);
-                                showToast(`"${product.name}" added to carousel items! Don't forget to save.`, "success");
+                                const updated = [...carouselItems, newSlide];
+                                setCarouselItems(updated);
+                                saveCarousel(updated);
                               }}
                               className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition shrink-0 ${
                                 isAlreadyInCarousel 
@@ -1973,6 +1977,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                           };
                           const updated = [...carouselItems, newSlide];
                           setCarouselItems(updated);
+                          saveCarousel(updated);
                           
                           // Reset fields
                           setNewSlideName("");
@@ -1980,8 +1985,6 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                           setNewSlidePrice("");
                           setNewSlideCategory("Promo");
                           setNewSlideImageUrl("");
-                          
-                          showToast("Custom slide created successfully! Remember to click 'Save Carousel Layout' to persist changes.", "success");
                         }}
                         className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
                       >
@@ -2180,8 +2183,8 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                     item.id === finalItem.id ? finalItem : item
                   );
                   setCarouselItems(updated);
+                  saveCarousel(updated);
                   setEditingCarouselItem(null);
-                  showToast("Carousel item updated! Remember to click 'Save Carousel Layout' to persist changes.", "info");
                 }}
                 className="p-6 space-y-4 animate-none max-h-[75vh] overflow-y-auto scrollbar-thin"
               >
