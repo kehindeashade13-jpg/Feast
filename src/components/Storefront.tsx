@@ -597,19 +597,6 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
 
           {/* Action Buttons */}
           <div className="flex items-center gap-3">
-            {/* Cart Button */}
-            <button 
-              onClick={() => setIsCartOpen(true)}
-              className="relative p-2.5 bg-neutral-800 hover:bg-neutral-700 rounded-xl text-amber-400 transition shadow-md border border-neutral-700/50 cursor-pointer flex items-center justify-center"
-            >
-              <ShoppingCart className="w-5 h-5" />
-              {cart.length > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-amber-400 text-black text-[10px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center animate-bounce shadow-md">
-                  {cart.reduce((sum, item) => sum + item.quantity, 0)}
-                </span>
-              )}
-            </button>
-
             {/* Admin entry button */}
             <button 
               onClick={onGoToAdmin}
@@ -726,20 +713,15 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
                             <span className="font-mono text-amber-400 font-extrabold text-xs sm:text-sm">
                               {currentSpecial?.price ? `₦${currentSpecial.price.toLocaleString()}` : "Free Promo"}
                             </span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (currentSpecial) {
-                                  setCustomizingProduct(currentSpecial as Product);
-                                  setSelectedSize("Regular");
-                                  setSelectedSpice("Spicy");
-                                  setSelectedExtras([]);
-                                }
-                              }}
-                              className="text-[9px] sm:text-[10px] bg-amber-400 hover:bg-amber-500 text-black font-extrabold px-2 py-1 rounded-lg transition uppercase flex items-center gap-1 border border-amber-300 cursor-pointer"
+                            <a
+                              href={currentSpecial ? getSingleProductWhatsAppUrl(currentSpecial) : "#"}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-[9px] sm:text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold px-2.5 py-1.5 rounded-lg transition uppercase flex items-center gap-1 border border-emerald-500/20 cursor-pointer shadow-md shadow-emerald-950/20"
                             >
-                              Add +
-                            </button>
+                              <MessageCircle className="w-3 h-3 fill-white/10" /> Order WhatsApp
+                            </a>
                           </div>
                         </div>
                       </motion.div>
@@ -874,28 +856,18 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
                         </div>
                         <div className="pt-4 border-t border-neutral-850 space-y-3">
                           <div className="flex items-center justify-between">
+                            <span className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Price</span>
                             <span className="font-mono text-lg font-bold text-amber-400">
                               ₦{product.price.toLocaleString()}
                             </span>
-                            <button
-                              onClick={() => {
-                                setCustomizingProduct(product);
-                                setSelectedSize("Regular");
-                                setSelectedSpice("Spicy");
-                                setSelectedExtras([]);
-                              }}
-                              className="bg-amber-400 hover:bg-amber-500 text-black font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer uppercase flex items-center gap-1.5"
-                            >
-                              <Plus className="w-3.5 h-3.5" /> Order Feast
-                            </button>
                           </div>
                           <a
                             href={getSingleProductWhatsAppUrl(product)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs py-2.5 rounded-xl transition cursor-pointer uppercase flex items-center justify-center gap-1.5 border border-emerald-500/20 shadow-lg shadow-emerald-900/20"
+                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs py-3 rounded-xl transition cursor-pointer uppercase flex items-center justify-center gap-1.5 border border-emerald-500/20 shadow-lg shadow-emerald-900/20"
                           >
-                            <MessageCircle className="w-3.5 h-3.5 fill-white/10" /> WhatsApp Order (08066482553)
+                            <MessageCircle className="w-4 h-4 fill-white/10" /> WhatsApp Order (08066482553)
                           </a>
                         </div>
                       </div>
@@ -987,28 +959,18 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
                       </div>
                       <div className="pt-4 border-t border-neutral-850 space-y-3">
                         <div className="flex items-center justify-between">
+                          <span className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Price</span>
                           <span className="font-mono text-lg font-bold text-amber-400">
                             ₦{product.price.toLocaleString()}
                           </span>
-                          <button
-                            onClick={() => {
-                              setCustomizingProduct(product);
-                              setSelectedSize("Regular");
-                              setSelectedSpice("Spicy");
-                              setSelectedExtras([]);
-                            }}
-                            className="bg-amber-400 hover:bg-amber-500 text-black font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer uppercase flex items-center gap-1.5"
-                          >
-                            <Plus className="w-3.5 h-3.5" /> Order Feast
-                          </button>
                         </div>
                         <a
                           href={getSingleProductWhatsAppUrl(product)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs py-2.5 rounded-xl transition cursor-pointer uppercase flex items-center justify-center gap-1.5 border border-emerald-500/20 shadow-lg shadow-emerald-900/20"
+                          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs py-3 rounded-xl transition cursor-pointer uppercase flex items-center justify-center gap-1.5 border border-emerald-500/20 shadow-lg shadow-emerald-900/20"
                         >
-                          <MessageCircle className="w-3.5 h-3.5 fill-white/10" /> WhatsApp Order (08066482553)
+                          <MessageCircle className="w-4 h-4 fill-white/10" /> WhatsApp Order (08066482553)
                         </a>
                       </div>
                     </div>
