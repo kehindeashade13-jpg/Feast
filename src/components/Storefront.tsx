@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { 
   ShoppingBag, Search, ShoppingCart, Plus, Minus, X, Check, MapPin, 
   Phone, User, ArrowRight, Clock, ShieldCheck, HelpCircle, Eye, ChevronLeft, ChevronRight,
-  TrendingUp, Award, Flame, ExternalLink, Calendar
+  TrendingUp, Award, Flame, ExternalLink, Calendar, MessageCircle
 } from "lucide-react";
 import { Product } from "../types";
 
@@ -332,8 +332,13 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab("home")}>
-            <div className="w-11 h-11 bg-amber-400 rounded-xl flex items-center justify-center shadow-lg shadow-amber-400/20">
-              <Flame className="w-6 h-6 text-black fill-black animate-pulse" />
+            <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg shadow-amber-400/15 border-2 border-neutral-800 shrink-0">
+              <img 
+                src="/src/assets/images/chicken_feast_logo_1784248908926.jpg" 
+                alt="CHICKENFEAST Logo" 
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
             </div>
             <div>
               <span className="font-sans font-extrabold text-lg sm:text-xl tracking-tight text-white block">
@@ -951,27 +956,106 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
 
         {/* TAB 4: ABOUT PAGE */}
         {activeTab === "about" && (
-          <div className="max-w-3xl mx-auto px-4 space-y-10 mt-6">
-            <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 sm:p-10 space-y-6 text-center">
+          <div className="max-w-4xl mx-auto px-4 space-y-8 mt-6">
+            {/* Story Card */}
+            <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 sm:p-10 space-y-6 text-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/5 rounded-full blur-3xl" />
               <div className="w-14 h-14 bg-amber-400 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-amber-400/10">
                 <Award className="w-7 h-7 text-black fill-black" />
               </div>
               <h1 className="font-sans font-extrabold text-2xl sm:text-3xl text-white uppercase tracking-tight">The Story of ChickenFeast.ng</h1>
               <p className="text-sm text-neutral-300 leading-relaxed max-w-2xl mx-auto">
-                Born out of a deep-seated passion for authentic Nigerian smokehouse grill culture, ChickenFeast.ng combines traditional yaji spices and roasted-peanut rubs with modern fast-food culinary precision.
+                Born out of a deep-seated passion for authentic smokehouse grill culture, ChickenFeast.ng combines traditional spices with modern fast-food culinary precision. We offer premium, sizzling delicacies prepared fresh and locked in heat-safe foil to deliver unparalleled flavor directly to your doorstep.
               </p>
+
+              {/* What We Sell Bento Block */}
+              <div className="border-t border-neutral-800/80 pt-8 space-y-4">
+                <span className="text-[10px] text-amber-400 font-extrabold uppercase tracking-widest block">What We Serve</span>
+                <h2 className="text-lg font-extrabold text-white uppercase tracking-tight">Tasty BBQ Chicken, Crispy Chicken, Burgers & Shawarma</h2>
+                <p className="text-xs text-neutral-400 max-w-md mx-auto">
+                  Our kitchen crafts mouthwatering smokehouse BBQ chicken, golden crispy wings & thighs, premium custom-grilled burgers, and freshly wrapped savory shawarma. <span className="text-amber-400 font-bold block mt-1">⚡ ONLINE ORDERS ONLY</span>
+                </p>
+              </div>
+
               <div className="border-t border-neutral-800 pt-8 grid grid-cols-1 sm:grid-cols-3 gap-6 text-left">
                 <div className="space-y-2 bg-neutral-950 p-4 rounded-2xl border border-neutral-850">
                   <h3 className="font-bold text-white text-sm uppercase text-amber-400">Smoked Daily</h3>
-                  <p className="text-xs text-neutral-400 leading-relaxed">We source all our beef flank and tender chicken thighs locally, prepared fresh with hickory embers daily.</p>
+                  <p className="text-xs text-neutral-400 leading-relaxed">We source all our tender chicken thighs and wings locally, prepared fresh with hickory smoke daily.</p>
                 </div>
                 <div className="space-y-2 bg-neutral-950 p-4 rounded-2xl border border-neutral-850">
-                  <h3 className="font-bold text-white text-sm uppercase text-amber-400">Traditional Yaji</h3>
-                  <p className="text-xs text-neutral-400 leading-relaxed">Our secret seasoning blends are imported straight from Kano, mixing authentic peanut ginger spices with heat.</p>
+                  <h3 className="font-bold text-white text-sm uppercase text-amber-400">Traditional Spicing</h3>
+                  <p className="text-xs text-neutral-400 leading-relaxed">Our secret seasoning blends mix authentic heat and herbs with modern culinary standards.</p>
                 </div>
                 <div className="space-y-2 bg-neutral-950 p-4 rounded-2xl border border-neutral-850">
                   <h3 className="font-bold text-white text-sm uppercase text-amber-400">Hygiene Standard</h3>
-                  <p className="text-xs text-neutral-400 leading-relaxed">From raw preparation to state-of-the-art aluminum thermal locks, we guarantee spotless kitchen safety.</p>
+                  <p className="text-xs text-neutral-400 leading-relaxed">From raw preparation to high-quality aluminum thermal packaging, we guarantee spotless kitchen safety.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Contact & Operational Details Card */}
+            <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 sm:p-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+              <div className="space-y-4">
+                <span className="text-[10px] text-amber-400 font-extrabold uppercase tracking-widest block">Order Info & Operations</span>
+                <h3 className="text-xl font-extrabold text-white uppercase tracking-tight">Direct Ordering Channels</h3>
+                <p className="text-xs text-neutral-400 leading-relaxed">
+                  We run an exclusive online kitchen. Orders are freshly prepared, packed, and dispatched straight to you for premium freshness. Place your order right here on our app, or connect with our active channels below.
+                </p>
+
+                <div className="flex flex-wrap gap-3 pt-2">
+                  <a 
+                    href="https://wa.me/2348066482553" 
+                    target="_blank" 
+                    referrerPolicy="no-referrer"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-black font-extrabold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer uppercase shadow-md"
+                  >
+                    <MessageCircle className="w-4 h-4 fill-black" /> Chat on WhatsApp
+                  </a>
+                  <a 
+                    href="https://www.tiktok.com/@chickenfeast.ng" 
+                    target="_blank" 
+                    referrerPolicy="no-referrer"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 bg-neutral-950 hover:bg-neutral-850 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl border border-neutral-800 transition cursor-pointer uppercase"
+                  >
+                    <Flame className="w-4 h-4 text-amber-400 fill-amber-400" /> Visit TikTok Page
+                  </a>
+                </div>
+              </div>
+
+              <div className="space-y-4 bg-neutral-950 p-6 rounded-2xl border border-neutral-850">
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider border-b border-neutral-850 pb-2 flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-amber-400" /> Operational Hub Details
+                </h4>
+
+                <div className="space-y-4 text-xs">
+                  {/* Address */}
+                  <div className="flex gap-3 items-start">
+                    <MapPin className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="block font-bold text-neutral-300">Kitchen Address</span>
+                      <span className="text-neutral-400">Oko-Afo, Badagry, Lagos State</span>
+                    </div>
+                  </div>
+
+                  {/* Hours */}
+                  <div className="flex gap-3 items-start">
+                    <Clock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="block font-bold text-neutral-300">Available Daily</span>
+                      <span className="text-neutral-400">12:00 PM - 06:00 PM</span>
+                    </div>
+                  </div>
+
+                  {/* Social links */}
+                  <div className="flex gap-3 items-start">
+                    <Phone className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="block font-bold text-neutral-300">WhatsApp / Call Contact</span>
+                      <span className="text-neutral-400 font-mono">08066482553</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -980,21 +1064,66 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
       </main>
 
       {/* FOOTER */}
-      <footer className="bg-neutral-900 border-t border-neutral-800 py-12 px-4 text-center text-xs text-neutral-500">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-          <div className="text-left space-y-1">
-            <span className="font-extrabold text-white text-sm block">CHICKENFEAST<span className="text-amber-400">.NG</span></span>
-            <p className="text-[11px] text-neutral-400">Serving Premium Halal Smoked Suya & Burgers since 2026.</p>
+      <footer className="bg-neutral-900 border-t border-neutral-800 pt-14 pb-8 px-6 text-xs text-neutral-500">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 mb-8">
+          
+          {/* Col 1: Brand details */}
+          <div className="md:col-span-5 space-y-4 text-left">
+            <span className="font-sans font-black text-white text-lg tracking-wider block">
+              CHICKENFEAST<span className="text-amber-400">.NG</span>
+            </span>
+            <p className="text-[12px] text-neutral-400 leading-relaxed max-w-sm">
+              We sell tasty BBQ chicken, Crispy chicken, delicious custom Burgers, and premium savory Shawarma. <span className="text-amber-400 font-semibold block mt-1">Online orders only.</span>
+            </p>
           </div>
-          <div className="flex gap-4 text-neutral-400 font-semibold justify-center">
-            <button onClick={() => setActiveTab("home")} className="hover:text-amber-400">Home</button>
-            <button onClick={() => setActiveTab("menu")} className="hover:text-amber-400">Menu</button>
-            <button onClick={() => setActiveTab("track")} className="hover:text-amber-400">Track</button>
-            <button onClick={() => setActiveTab("about")} className="hover:text-amber-400">About</button>
+
+          {/* Col 2: Hub details */}
+          <div className="md:col-span-4 space-y-3 text-left">
+            <span className="text-[10px] font-extrabold text-white uppercase tracking-widest block">Operational Details</span>
+            <div className="space-y-2 text-[11px] text-neutral-400">
+              <p className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" /> Available daily: 12pm - 6pm</p>
+              <p className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" /> Address: Oko-Afo, Badagry, Lagos</p>
+            </div>
           </div>
-          <div className="text-sm sm:text-right text-[11px] text-neutral-400">
-            © 2026 ChickenFeast.ng Storefront. Built for absolute dining excellence.
+
+          {/* Col 3: Contact details */}
+          <div className="md:col-span-3 space-y-3 text-left">
+            <span className="text-[10px] font-extrabold text-white uppercase tracking-widest block">Connect & Order</span>
+            <div className="space-y-2 text-[11px]">
+              <a 
+                href="https://wa.me/2348066482553" 
+                target="_blank" 
+                referrerPolicy="no-referrer"
+                rel="noopener noreferrer" 
+                className="flex items-center gap-1.5 text-emerald-400 hover:text-emerald-500 transition-colors"
+              >
+                <MessageCircle className="w-3.5 h-3.5 fill-emerald-500/10 shrink-0" /> WhatsApp: 08066482553
+              </a>
+              <a 
+                href="https://www.tiktok.com/@chickenfeast.ng" 
+                target="_blank" 
+                referrerPolicy="no-referrer"
+                rel="noopener noreferrer" 
+                className="flex items-center gap-1.5 text-neutral-300 hover:text-amber-400 transition-colors"
+              >
+                <Flame className="w-3.5 h-3.5 text-amber-400 shrink-0" /> TikTok: chickenfeast.ng
+              </a>
+            </div>
           </div>
+
+        </div>
+
+        {/* Footer bottom bar */}
+        <div className="max-w-7xl mx-auto border-t border-neutral-850 pt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-wrap gap-4 text-neutral-400 font-semibold justify-center sm:justify-start">
+            <button onClick={() => setActiveTab("home")} className="hover:text-amber-400 cursor-pointer">Home</button>
+            <button onClick={() => setActiveTab("menu")} className="hover:text-amber-400 cursor-pointer">Menu</button>
+            <button onClick={() => setActiveTab("track")} className="hover:text-amber-400 cursor-pointer">Track</button>
+            <button onClick={() => setActiveTab("about")} className="hover:text-amber-400 cursor-pointer">About</button>
+          </div>
+          <p className="text-[11px] text-neutral-500 text-center sm:text-right">
+            © 2026 ChickenFeast.ng Storefront. All rights reserved. Delighting food lovers everywhere.
+          </p>
         </div>
       </footer>
 
