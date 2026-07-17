@@ -6,6 +6,7 @@ import {
   UploadCloud, Image as ImageIcon, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { Product, AppConfig } from "../types";
+import { SupabaseHelper } from "./SupabaseHelper";
 
 interface ImagePickerProps {
   value: string;
@@ -239,7 +240,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [activeTab, setActiveTab] = useState<"catalog" | "add" | "orders" | "carousel">("catalog");
+  const [activeTab, setActiveTab] = useState<"catalog" | "add" | "orders" | "setup" | "carousel">("catalog");
   const [carouselItems, setCarouselItems] = useState<any[]>([]);
   const [loadingCarousel, setLoadingCarousel] = useState(false);
   const [editingCarouselItem, setEditingCarouselItem] = useState<any | null>(null);
@@ -952,7 +953,56 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         
+        {/* Connection status callout banner */}
+        {!config.isSupabaseConfigured && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-5 mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+            <div className="flex gap-3">
+              <div className="p-2 bg-blue-100 rounded-xl text-blue-700 shrink-0">
+                <Database className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-neutral-900 text-sm">
+                  Running on local JSON memory database
+                </h3>
+                <p className="text-xs text-neutral-600 mt-1 max-w-xl leading-relaxed">
+                  This demo allows you to test adding, editing, and deleting mock products instantly. To sync this admin dashboard with your live Supabase workspace database, navigate to the <strong>Supabase Setup Guide</strong>.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setActiveTab("setup")}
+              className="text-xs bg-white text-neutral-800 hover:bg-neutral-50 border border-neutral-200 hover:border-neutral-300 font-semibold px-4 py-2 rounded-xl transition shadow-sm shrink-0"
+            >
+              View Setup Instructions
+            </button>
+          </div>
+        )}
 
+        {/* Supabase Error Alert (e.g. table not found) */}
+        {config.isSupabaseConfigured && dbError && (
+          <div className="bg-gradient-to-r from-rose-50 to-orange-50 border border-rose-200 rounded-2xl p-5 mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm animate-pulse">
+            <div className="flex gap-3">
+              <div className="p-2 bg-rose-100 rounded-xl text-rose-700 shrink-0">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-rose-950 text-sm flex items-center gap-1.5">
+                  Missing Supabase Database Schema
+                </h3>
+                <p className="text-xs text-neutral-600 mt-1 max-w-xl leading-relaxed">
+                  Your server is configured with Supabase credentials, but failed to find the <code className="bg-rose-100/50 px-1 py-0.5 rounded text-rose-800 font-semibold font-mono">products</code> table: <span className="italic text-neutral-700">"{dbError}"</span>. 
+                  We have safely activated **local JSON memory fallback** so your dashboard remains fully functional. To fix this, click the button to the right to open the <strong>Supabase Setup Guide</strong> and execute the table schema SQL script.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setActiveTab("setup")}
+              className="text-xs bg-rose-900 text-white hover:bg-rose-850 font-semibold px-4 py-2 rounded-xl transition shadow-sm shrink-0 cursor-pointer"
+            >
+              Setup products Table
+            </button>
+          </div>
+        )}
 
         {/* Navigation Sub-Tabs */}
         <div className="flex border-b border-neutral-200 mb-6 gap-6 text-sm font-medium overflow-x-auto whitespace-nowrap scrollbar-none pb-0.5">
@@ -996,7 +1046,17 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
               <motion.div layoutId="activeTabIndicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500" />
             )}
           </button>
-
+          <button
+            onClick={() => setActiveTab("setup")}
+            className={`pb-3 relative transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeTab === "setup" ? "text-emerald-700 font-bold" : "text-neutral-500 hover:text-neutral-800"
+            }`}
+          >
+            <Database className="w-3.5 h-3.5" /> Supabase Setup Guide
+            {activeTab === "setup" && (
+              <motion.div layoutId="activeTabIndicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600" />
+            )}
+          </button>
           <button
             onClick={() => setActiveTab("carousel")}
             className={`pb-3 relative transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 ${
@@ -1305,7 +1365,12 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
             </div>
           )}
 
-
+          {/* TAB 3: SETUP INSTRUCTIONS */}
+          {activeTab === "setup" && (
+            <div className="space-y-6">
+              <SupabaseHelper />
+            </div>
+          )}
 
           {/* TAB 4: MANAGE ORDERS */}
           {activeTab === "orders" && (
