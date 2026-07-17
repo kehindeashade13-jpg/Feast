@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   ShoppingBag, Search, ShoppingCart, Plus, Minus, X, Check, MapPin, 
-  Phone, User, ArrowRight, Clock, ShieldCheck, HelpCircle, Eye, ChevronRight,
+  Phone, User, ArrowRight, Clock, ShieldCheck, HelpCircle, Eye, ChevronLeft, ChevronRight,
   TrendingUp, Award, Flame, ExternalLink, Calendar
 } from "lucide-react";
 import { Product } from "../types";
@@ -107,14 +107,15 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
   const chefSpecialItems = carouselItems.length > 0 ? carouselItems : defaultCarouselItems;
 
   const [currentChefSpecialIndex, setCurrentChefSpecialIndex] = useState(0);
+  const [isCarouselHovered, setIsCarouselHovered] = useState(false);
 
   useEffect(() => {
-    if (chefSpecialItems.length <= 1) return;
+    if (chefSpecialItems.length <= 1 || isCarouselHovered) return;
     const interval = setInterval(() => {
       setCurrentChefSpecialIndex((prev) => (prev + 1) % chefSpecialItems.length);
     }, 5000); // rotate every 5 seconds
     return () => clearInterval(interval);
-  }, [chefSpecialItems.length]);
+  }, [chefSpecialItems.length, isCarouselHovered]);
 
   const currentSpecial = chefSpecialItems[currentChefSpecialIndex % chefSpecialItems.length] || chefSpecialItems[0];
 
@@ -486,10 +487,14 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
                 {/* Hero Image */}
                 <div className="lg:col-span-5 relative">
                   <div className="absolute inset-0 bg-amber-400/20 rounded-full blur-3xl scale-95" />
-                  <div className="relative border-4 border-neutral-800 rounded-3xl overflow-hidden aspect-square max-w-md mx-auto shadow-2xl bg-neutral-900">
+                  <div 
+                    onMouseEnter={() => setIsCarouselHovered(true)}
+                    onMouseLeave={() => setIsCarouselHovered(false)}
+                    className="relative border-4 border-neutral-800 rounded-3xl overflow-hidden aspect-square max-w-md mx-auto shadow-2xl bg-neutral-900 group"
+                  >
                     <AnimatePresence mode="wait">
                       <motion.div
-                        key={currentSpecial.id}
+                        key={currentSpecial ? currentSpecial.id : "empty"}
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 1.05 }}
@@ -497,29 +502,31 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
                         className="absolute inset-0 w-full h-full"
                       >
                         <img 
-                          src={currentSpecial.image_url || "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800"} 
-                          alt={currentSpecial.name} 
+                          src={currentSpecial?.image_url || "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800"} 
+                          alt={currentSpecial?.name || "Premium Feast Item"} 
                           className="w-full h-full object-cover"
                           referrerPolicy="no-referrer"
                         />
-                        <div className="absolute bottom-4 left-4 right-4 bg-neutral-900/95 border border-neutral-800 p-4 rounded-2xl backdrop-blur-md flex items-center justify-between shadow-lg">
-                          <div className="flex-1 min-w-0 pr-3">
+                        <div className="absolute bottom-4 left-4 right-4 bg-neutral-900/95 border border-neutral-800 p-4 rounded-2xl backdrop-blur-md flex items-center justify-between shadow-lg z-10">
+                          <div className="flex-1 min-w-0 pr-3 text-left">
                             <span className="text-[10px] text-amber-400 uppercase tracking-widest font-extrabold flex items-center gap-1">
                               <Flame className="w-3 h-3 fill-amber-400 animate-pulse" /> Chef's Special
                             </span>
-                            <h3 className="text-xs sm:text-sm font-bold text-white mt-0.5 truncate">{currentSpecial.name}</h3>
+                            <h3 className="text-xs sm:text-sm font-bold text-white mt-0.5 truncate">{currentSpecial?.name || "Menu Premium"}</h3>
                           </div>
                           <div className="flex flex-col items-end gap-1 flex-shrink-0">
                             <span className="font-mono text-amber-400 font-extrabold text-xs sm:text-sm">
-                              ₦{currentSpecial.price?.toLocaleString()}
+                              {currentSpecial?.price ? `₦${currentSpecial.price.toLocaleString()}` : "Free Promo"}
                             </span>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setCustomizingProduct(currentSpecial as Product);
-                                setSelectedSize("Regular");
-                                setSelectedSpice("Spicy");
-                                setSelectedExtras([]);
+                                if (currentSpecial) {
+                                  setCustomizingProduct(currentSpecial as Product);
+                                  setSelectedSize("Regular");
+                                  setSelectedSpice("Spicy");
+                                  setSelectedExtras([]);
+                                }
                               }}
                               className="text-[9px] sm:text-[10px] bg-amber-400 hover:bg-amber-500 text-black font-extrabold px-2 py-1 rounded-lg transition uppercase flex items-center gap-1 border border-amber-300 cursor-pointer"
                             >
@@ -529,6 +536,51 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
                         </div>
                       </motion.div>
                     </AnimatePresence>
+
+                    {/* Manual Navigation Arrows */}
+                    {chefSpecialItems.length > 1 && (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCurrentChefSpecialIndex((prev) => (prev - 1 + chefSpecialItems.length) % chefSpecialItems.length);
+                          }}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 p-2 bg-neutral-900/85 hover:bg-amber-400 hover:text-black text-amber-400 rounded-full transition-all border border-neutral-800 opacity-0 group-hover:opacity-100 z-20 cursor-pointer shadow-md"
+                          title="Previous Special"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCurrentChefSpecialIndex((prev) => (prev + 1) % chefSpecialItems.length);
+                          }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-neutral-900/85 hover:bg-amber-400 hover:text-black text-amber-400 rounded-full transition-all border border-neutral-800 opacity-0 group-hover:opacity-100 z-20 cursor-pointer shadow-md"
+                          title="Next Special"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+
+                        {/* Dot indicators */}
+                        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20">
+                          {chefSpecialItems.map((_, idx) => (
+                            <button
+                              key={idx}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCurrentChefSpecialIndex(idx);
+                              }}
+                              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                                idx === currentChefSpecialIndex % chefSpecialItems.length
+                                  ? "bg-amber-400 w-4"
+                                  : "bg-white/40 hover:bg-white/70 w-1.5"
+                              }`}
+                              title={`Slide ${idx + 1}`}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

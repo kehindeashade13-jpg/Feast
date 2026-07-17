@@ -246,6 +246,13 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
   const [editingCarouselItem, setEditingCarouselItem] = useState<any | null>(null);
   const [activePreviewIndex, setActivePreviewIndex] = useState(0);
 
+  // Custom carousel slide creation states
+  const [newSlideName, setNewSlideName] = useState("");
+  const [newSlideDescription, setNewSlideDescription] = useState("");
+  const [newSlidePrice, setNewSlidePrice] = useState("");
+  const [newSlideCategory, setNewSlideCategory] = useState("Promo");
+  const [newSlideImageUrl, setNewSlideImageUrl] = useState("");
+
   useEffect(() => {
     if (activePreviewIndex >= carouselItems.length) {
       setActivePreviewIndex(Math.max(0, carouselItems.length - 1));
@@ -1879,6 +1886,108 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                         </div>
                       </div>
                     )}
+                  </div>
+
+                  {/* Create Custom Carousel Slide Form */}
+                  <div className="bg-white border border-neutral-200 rounded-2xl p-5 shadow-sm space-y-4">
+                    <h4 className="font-bold text-sm text-neutral-900 flex items-center gap-2 border-b border-neutral-100 pb-2.5">
+                      <Plus className="w-4 h-4 text-indigo-500" /> Create Custom Slide
+                    </h4>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-1">
+                          Slide Banner Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={newSlideName}
+                          onChange={(e) => setNewSlideName(e.target.value)}
+                          placeholder="e.g. Special Holiday Discount"
+                          className="w-full px-3 py-2 bg-neutral-50 hover:bg-neutral-100/30 focus:bg-white text-xs border border-neutral-250 focus:border-neutral-900 rounded-xl outline-none transition"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-1">
+                            Price (₦) or Label
+                          </label>
+                          <input
+                            type="text"
+                            value={newSlidePrice}
+                            onChange={(e) => setNewSlidePrice(e.target.value)}
+                            placeholder="e.g. 8500 or Free"
+                            className="w-full px-3 py-2 bg-neutral-50 hover:bg-neutral-100/30 focus:bg-white text-xs border border-neutral-250 focus:border-neutral-900 rounded-xl outline-none transition"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-1">
+                            Category Tag
+                          </label>
+                          <input
+                            type="text"
+                            value={newSlideCategory}
+                            onChange={(e) => setNewSlideCategory(e.target.value)}
+                            placeholder="e.g. Promo, Suya"
+                            className="w-full px-3 py-2 bg-neutral-50 hover:bg-neutral-100/30 focus:bg-white text-xs border border-neutral-250 focus:border-neutral-900 rounded-xl outline-none transition"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <ImagePicker
+                          value={newSlideImageUrl}
+                          onChange={(val) => setNewSlideImageUrl(val)}
+                          label="Slide Banner Image (Upload File or URL)"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-1">
+                          Description / Tagline *
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={newSlideDescription}
+                          onChange={(e) => setNewSlideDescription(e.target.value)}
+                          placeholder="Get a taste of our special marinated chicken cooked over authentic red-hot charcoal..."
+                          className="w-full px-3 py-2 bg-neutral-50 hover:bg-neutral-100/30 focus:bg-white text-xs border border-neutral-250 focus:border-neutral-900 rounded-xl outline-none transition resize-none"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!newSlideName || !newSlideDescription) {
+                            showToast("Please fill out at least Slide Name and Description.", "error");
+                            return;
+                          }
+                          const newSlide = {
+                            id: `custom-slide-${Date.now()}`,
+                            name: newSlideName,
+                            description: newSlideDescription,
+                            price: parsePrice(newSlidePrice),
+                            category: newSlideCategory || "Promo",
+                            image_url: newSlideImageUrl || "https://images.unsplash.com/photo-1432139555190-58524dae6a55?auto=format&fit=crop&q=80&w=800"
+                          };
+                          const updated = [...carouselItems, newSlide];
+                          setCarouselItems(updated);
+                          
+                          // Reset fields
+                          setNewSlideName("");
+                          setNewSlideDescription("");
+                          setNewSlidePrice("");
+                          setNewSlideCategory("Promo");
+                          setNewSlideImageUrl("");
+                          
+                          showToast("Custom slide created successfully! Remember to click 'Save Carousel Layout' to persist changes.", "success");
+                        }}
+                        className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Create Custom Slide
+                      </button>
+                    </div>
                   </div>
 
                 </div>
