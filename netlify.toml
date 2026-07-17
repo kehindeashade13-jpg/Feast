@@ -3,6 +3,10 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[functions]
+  node_compat = true
+  included_files = ["data_*.json"]
+
 # Route API requests to our serverless Netlify function
 [[redirects]]
   from = "/api/*"

@@ -240,7 +240,16 @@ function readLocalProducts() {
     const dbPath = getDbPath();
     if (!fs.existsSync(dbPath)) {
       try {
-        fs.writeFileSync(dbPath, JSON.stringify(localProductsInMemory, null, 2), "utf-8");
+        let initialData = localProductsInMemory;
+        if (isServerless && fs.existsSync(LOCAL_DB_PATH)) {
+          try {
+            initialData = JSON.parse(fs.readFileSync(LOCAL_DB_PATH, "utf-8"));
+          } catch (readErr) {
+            console.warn("Could not read committed local products file:", readErr);
+          }
+        }
+        fs.writeFileSync(dbPath, JSON.stringify(initialData, null, 2), "utf-8");
+        localProductsInMemory = initialData;
       } catch (writeErr) {
         console.warn("Could not write initial local products file, using memory fallback:", writeErr);
       }
@@ -315,7 +324,16 @@ function readLocalOrders(): any[] {
     const ordersPath = getOrdersDbPath();
     if (!fs.existsSync(ordersPath)) {
       try {
-        fs.writeFileSync(ordersPath, JSON.stringify([], null, 2), "utf-8");
+        let initialData = [];
+        if (isServerless && fs.existsSync(LOCAL_ORDERS_PATH)) {
+          try {
+            initialData = JSON.parse(fs.readFileSync(LOCAL_ORDERS_PATH, "utf-8"));
+          } catch (readErr) {
+            console.warn("Could not read committed local orders file:", readErr);
+          }
+        }
+        fs.writeFileSync(ordersPath, JSON.stringify(initialData, null, 2), "utf-8");
+        localOrdersInMemory = initialData;
       } catch (writeErr) {
         console.warn("Could not write initial local orders file, using memory fallback:", writeErr);
       }
@@ -653,11 +671,20 @@ function readLocalCarousel(): any[] {
     const dbPath = getCarouselDbPath();
     if (!fs.existsSync(dbPath)) {
       try {
-        fs.writeFileSync(dbPath, JSON.stringify(DEFAULT_CAROUSEL_ITEMS, null, 2), "utf-8");
+        let initialData = DEFAULT_CAROUSEL_ITEMS;
+        if (isServerless && fs.existsSync(LOCAL_CAROUSEL_PATH)) {
+          try {
+            initialData = JSON.parse(fs.readFileSync(LOCAL_CAROUSEL_PATH, "utf-8"));
+          } catch (readErr) {
+            console.warn("Could not read committed local carousel file:", readErr);
+          }
+        }
+        fs.writeFileSync(dbPath, JSON.stringify(initialData, null, 2), "utf-8");
+        localCarouselInMemory = initialData;
       } catch (writeErr) {
         console.warn("Could not write initial local carousel file, using memory fallback:", writeErr);
       }
-      return DEFAULT_CAROUSEL_ITEMS;
+      return localCarouselInMemory;
     }
     const data = fs.readFileSync(dbPath, "utf-8");
     const parsed = JSON.parse(data);
@@ -692,13 +719,23 @@ function readLocalCarouselDraft(): any[] {
   try {
     const dbPath = getCarouselDraftDbPath();
     if (!fs.existsSync(dbPath)) {
-      const live = readLocalCarousel();
+      let initialData = null;
+      if (isServerless && fs.existsSync(LOCAL_CAROUSEL_DRAFT_PATH)) {
+        try {
+          initialData = JSON.parse(fs.readFileSync(LOCAL_CAROUSEL_DRAFT_PATH, "utf-8"));
+        } catch (readErr) {
+          console.warn("Could not read committed local carousel draft file:", readErr);
+        }
+      }
+      if (!initialData) {
+        initialData = readLocalCarousel();
+      }
       try {
-        fs.writeFileSync(dbPath, JSON.stringify(live, null, 2), "utf-8");
+        fs.writeFileSync(dbPath, JSON.stringify(initialData, null, 2), "utf-8");
       } catch (writeErr) {
         console.warn("Could not write initial draft file:", writeErr);
       }
-      return live;
+      return initialData;
     }
     const data = fs.readFileSync(dbPath, "utf-8");
     return JSON.parse(data);
