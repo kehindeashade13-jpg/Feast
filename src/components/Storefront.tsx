@@ -476,7 +476,7 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
                   <div className="grid grid-cols-3 gap-6 pt-6 border-t border-neutral-850">
                     <div>
                       <span className="block font-sans font-extrabold text-xl text-white">100%</span>
-                      <span className="text-xs text-neutral-400">Halal Meat</span>
+                      <span className="text-xs text-neutral-400">Premium Quality</span>
                     </div>
                     <div>
                       <span className="block font-sans font-extrabold text-xl text-white">&lt; 35m</span>
