@@ -678,6 +678,44 @@ function writeLocalCarousel(carousel: any[]) {
   }
 }
 
+const LOCAL_CAROUSEL_DRAFT_PATH = path.join(process.cwd(), "data_carousel_draft.json");
+
+function getCarouselDraftDbPath(): string {
+  if (isServerless) {
+    return path.join("/tmp", "data_carousel_draft.json");
+  }
+  return LOCAL_CAROUSEL_DRAFT_PATH;
+}
+
+function readLocalCarouselDraft(): any[] {
+  try {
+    const dbPath = getCarouselDraftDbPath();
+    if (!fs.existsSync(dbPath)) {
+      const live = readLocalCarousel();
+      try {
+        fs.writeFileSync(dbPath, JSON.stringify(live, null, 2), "utf-8");
+      } catch (writeErr) {
+        console.warn("Could not write initial draft file:", writeErr);
+      }
+      return live;
+    }
+    const data = fs.readFileSync(dbPath, "utf-8");
+    return JSON.parse(data);
+  } catch (error) {
+    console.error("Error reading local carousel draft:", error);
+    return readLocalCarousel();
+  }
+}
+
+function writeLocalCarouselDraft(carousel: any[]) {
+  try {
+    const dbPath = getCarouselDraftDbPath();
+    fs.writeFileSync(dbPath, JSON.stringify(carousel, null, 2), "utf-8");
+  } catch (error) {
+    console.error("Error writing local carousel draft:", error);
+  }
+}
+
 // GET carousel items
 app.get("/api/carousel", (req, res) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
@@ -685,13 +723,31 @@ app.get("/api/carousel", (req, res) => {
   res.json({ carousel });
 });
 
-// POST - Update entire carousel configuration
+// GET carousel draft
+app.get("/api/carousel/draft", (req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+  const carousel = readLocalCarouselDraft();
+  res.json({ carousel });
+});
+
+// POST carousel draft
+app.post("/api/carousel/draft", (req, res) => {
+  const { carousel } = req.body || {};
+  if (!Array.isArray(carousel)) {
+    return res.status(400).json({ success: false, error: "Carousel draft must be an array." });
+  }
+  writeLocalCarouselDraft(carousel);
+  res.json({ success: true, carousel });
+});
+
+// POST - Update entire carousel configuration (publish draft)
 app.post("/api/carousel", (req, res) => {
   const { carousel } = req.body || {};
   if (!Array.isArray(carousel)) {
     return res.status(400).json({ success: false, error: "Carousel must be an array of products." });
   }
   writeLocalCarousel(carousel);
+  writeLocalCarouselDraft(carousel); // Sync draft with published layout
   res.json({ success: true, carousel });
 });
 

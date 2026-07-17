@@ -452,7 +452,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
   const fetchCarousel = async () => {
     setLoadingCarousel(true);
     try {
-      const res = await fetch(`/api/carousel?t=${Date.now()}`);
+      const res = await fetch(`/api/carousel/draft?t=${Date.now()}`);
       const data = await res.json();
       if (data && data.carousel) {
         setCarouselItems(data.carousel);
@@ -461,6 +461,18 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
       console.error("Error fetching carousel:", err);
     } finally {
       setLoadingCarousel(false);
+    }
+  };
+
+  const saveCarouselDraft = async (items: any[]) => {
+    try {
+      await fetch("/api/carousel/draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ carousel: items })
+      });
+    } catch (err) {
+      console.error("Error auto-saving draft:", err);
     }
   };
 
@@ -1607,8 +1619,10 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                           category: "Promo",
                           image_url: "https://images.unsplash.com/photo-1432139555190-58524dae6a55?auto=format&fit=crop&q=80&w=800"
                         };
-                        setCarouselItems(prev => [...prev, newSlide]);
-                        showToast("New blank banner slide added. Don't forget to save!", "info");
+                        const updated = [...carouselItems, newSlide];
+                        setCarouselItems(updated);
+                        saveCarouselDraft(updated);
+                        showToast("New blank banner slide added. Click 'Save Carousel Layout' to apply changes.", "info");
                       }}
                       className="text-xs bg-indigo-50 hover:bg-indigo-100/80 text-indigo-700 border border-indigo-100 font-semibold px-4 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
                     >
@@ -1675,6 +1689,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                                   updated[idx] = updated[idx - 1];
                                   updated[idx - 1] = temp;
                                   setCarouselItems(updated);
+                                  saveCarouselDraft(updated);
                                   showToast("Slide moved up. Click 'Save Carousel Layout' to apply changes.", "info");
                                 }}
                                 className="p-1.5 hover:bg-neutral-100 text-neutral-500 hover:text-neutral-900 rounded-lg disabled:opacity-30 transition cursor-pointer font-bold"
@@ -1690,6 +1705,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                                   updated[idx] = updated[idx + 1];
                                   updated[idx + 1] = temp;
                                   setCarouselItems(updated);
+                                  saveCarouselDraft(updated);
                                   showToast("Slide moved down. Click 'Save Carousel Layout' to apply changes.", "info");
                                 }}
                                 className="p-1.5 hover:bg-neutral-100 text-neutral-500 hover:text-neutral-900 rounded-lg disabled:opacity-30 transition cursor-pointer font-bold"
@@ -1708,6 +1724,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                                 onClick={() => {
                                   const updated = carouselItems.filter(p => p.id !== item.id);
                                   setCarouselItems(updated);
+                                  saveCarouselDraft(updated);
                                   showToast("Slide removed. Click 'Save Carousel Layout' to apply changes.", "info");
                                 }}
                                 className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition cursor-pointer"
@@ -1775,6 +1792,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                                 };
                                 const updated = [...carouselItems, newSlide];
                                 setCarouselItems(updated);
+                                saveCarouselDraft(updated);
                                 showToast("Catalog item added to layout. Click 'Save Carousel Layout' to apply changes.", "info");
                               }}
                               className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition shrink-0 ${
@@ -1977,6 +1995,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                           };
                           const updated = [...carouselItems, newSlide];
                           setCarouselItems(updated);
+                          saveCarouselDraft(updated);
                           showToast("Custom slide added to layout. Click 'Save Carousel Layout' to apply changes.", "info");
                           
                           // Reset fields
@@ -2183,6 +2202,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                     item.id === finalItem.id ? finalItem : item
                   );
                   setCarouselItems(updated);
+                  saveCarouselDraft(updated);
                   showToast("Slide updated locally. Click 'Save Carousel Layout' to apply changes.", "info");
                   setEditingCarouselItem(null);
                 }}
