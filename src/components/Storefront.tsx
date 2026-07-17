@@ -335,6 +335,18 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
     return `https://wa.me/${adminPhone}?text=${encodeURIComponent(messageText)}`;
   };
 
+  const getSingleProductWhatsAppUrl = (product: Product) => {
+    const adminPhone = "2348066482553";
+    const messageText = `🍔 *CHICKENFEAST.NG DIRECT ORDER* 🍟\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `Hello! I would like to order this product directly via WhatsApp:\n\n` +
+      `🍗 *Product:* ${product.name}\n` +
+      `💰 *Price:* ₦${product.price.toLocaleString()}\n` +
+      `📝 *Description:* ${product.description || "Fresh & Hot Nigerian Fast Food"}\n\n` +
+      `Please let me know how to proceed. Thank you!`;
+    return `https://wa.me/${adminPhone}?text=${encodeURIComponent(messageText)}`;
+  };
+
   // Place Order API Submission
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -860,21 +872,31 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
                             {product.description}
                           </p>
                         </div>
-                        <div className="flex items-center justify-between pt-4 border-t border-neutral-850">
-                          <span className="font-mono text-lg font-bold text-amber-400">
-                            ₦{product.price.toLocaleString()}
-                          </span>
-                          <button
-                            onClick={() => {
-                              setCustomizingProduct(product);
-                              setSelectedSize("Regular");
-                              setSelectedSpice("Spicy");
-                              setSelectedExtras([]);
-                            }}
-                            className="bg-amber-400 hover:bg-amber-500 text-black font-extrabold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer uppercase flex items-center gap-1.5"
+                        <div className="pt-4 border-t border-neutral-850 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono text-lg font-bold text-amber-400">
+                              ₦{product.price.toLocaleString()}
+                            </span>
+                            <button
+                              onClick={() => {
+                                setCustomizingProduct(product);
+                                setSelectedSize("Regular");
+                                setSelectedSpice("Spicy");
+                                setSelectedExtras([]);
+                              }}
+                              className="bg-amber-400 hover:bg-amber-500 text-black font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer uppercase flex items-center gap-1.5"
+                            >
+                              <Plus className="w-3.5 h-3.5" /> Order Feast
+                            </button>
+                          </div>
+                          <a
+                            href={getSingleProductWhatsAppUrl(product)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs py-2.5 rounded-xl transition cursor-pointer uppercase flex items-center justify-center gap-1.5 border border-emerald-500/20 shadow-lg shadow-emerald-900/20"
                           >
-                            <Plus className="w-3.5 h-3.5" /> Order Feast
-                          </button>
+                            <MessageCircle className="w-3.5 h-3.5 fill-white/10" /> WhatsApp Order (08066482553)
+                          </a>
                         </div>
                       </div>
                     </div>
@@ -963,21 +985,31 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
                           {product.description}
                         </p>
                       </div>
-                      <div className="flex items-center justify-between pt-4 border-t border-neutral-850">
-                        <span className="font-mono text-lg font-bold text-amber-400">
-                          ₦{product.price.toLocaleString()}
-                        </span>
-                        <button
-                          onClick={() => {
-                            setCustomizingProduct(product);
-                            setSelectedSize("Regular");
-                            setSelectedSpice("Spicy");
-                            setSelectedExtras([]);
-                          }}
-                          className="bg-amber-400 hover:bg-amber-500 text-black font-extrabold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer uppercase flex items-center gap-1.5"
+                      <div className="pt-4 border-t border-neutral-850 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-lg font-bold text-amber-400">
+                            ₦{product.price.toLocaleString()}
+                          </span>
+                          <button
+                            onClick={() => {
+                              setCustomizingProduct(product);
+                              setSelectedSize("Regular");
+                              setSelectedSpice("Spicy");
+                              setSelectedExtras([]);
+                            }}
+                            className="bg-amber-400 hover:bg-amber-500 text-black font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer uppercase flex items-center gap-1.5"
+                          >
+                            <Plus className="w-3.5 h-3.5" /> Order Feast
+                          </button>
+                        </div>
+                        <a
+                          href={getSingleProductWhatsAppUrl(product)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs py-2.5 rounded-xl transition cursor-pointer uppercase flex items-center justify-center gap-1.5 border border-emerald-500/20 shadow-lg shadow-emerald-900/20"
                         >
-                          <Plus className="w-3.5 h-3.5" /> Order Feast
-                        </button>
+                          <MessageCircle className="w-3.5 h-3.5 fill-white/10" /> WhatsApp Order (08066482553)
+                        </a>
                       </div>
                     </div>
                   </div>
