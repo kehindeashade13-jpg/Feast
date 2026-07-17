@@ -819,7 +819,7 @@ app.post("/api/orders", async (req, res) => {
       let data: any = null;
       let error: any = null;
       let attempts = 0;
-      const maxAttempts = 4;
+      const maxAttempts = 15;
 
       while (attempts < maxAttempts) {
         const result = await supabase
@@ -858,8 +858,23 @@ app.post("/api/orders", async (req, res) => {
           delete dbOrder[missingColumn];
           attempts++;
         } else {
-          // If we can't identify a missing column to drop, stop retrying
-          break;
+          // Check for not-null constraint violation
+          const match4 = msg.match(/null value in column "([^"]+)"/i);
+          if (match4) {
+            const notNullCol = match4[1];
+            console.warn(`Self-healing database insert: Column "${notNullCol}" violates NOT NULL constraint. Providing default and retrying...`);
+            if (notNullCol === "items") {
+              dbOrder[notNullCol] = [];
+            } else if (notNullCol === "total_price" || notNullCol === "price" || notNullCol === "stock") {
+              dbOrder[notNullCol] = 0;
+            } else {
+              dbOrder[notNullCol] = "";
+            }
+            attempts++;
+          } else {
+            // If we can't identify a missing column or not-null constraint, stop retrying
+            break;
+          }
         }
       }
 
