@@ -6,6 +6,8 @@ import {
   TrendingUp, Award, Flame, ExternalLink, Calendar, MessageCircle
 } from "lucide-react";
 import { Product } from "../types";
+// @ts-ignore
+import logoImg from "../assets/images/chicken_feast_logo_1784248908926.jpg";
 
 interface CartItem {
   product: Product;
@@ -334,7 +336,7 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab("home")}>
             <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg shadow-amber-400/15 border-2 border-neutral-800 shrink-0">
               <img 
-                src="/src/assets/images/chicken_feast_logo_1784248908926.jpg" 
+                src="https://github.com/user-attachments/assets/5b8c10c2-42e1-43ac-9ab9-c84a662b6371" 
                 alt="CHICKENFEAST Logo" 
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
