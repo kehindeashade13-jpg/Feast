@@ -452,7 +452,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
   const fetchCarousel = async () => {
     setLoadingCarousel(true);
     try {
-      const res = await fetch("/api/carousel");
+      const res = await fetch(`/api/carousel?t=${Date.now()}`);
       const data = await res.json();
       if (data && data.carousel) {
         setCarouselItems(data.carousel);
@@ -1675,7 +1675,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                                   updated[idx] = updated[idx - 1];
                                   updated[idx - 1] = temp;
                                   setCarouselItems(updated);
-                                  saveCarousel(updated);
+                                  showToast("Slide moved up. Click 'Save Carousel Layout' to apply changes.", "info");
                                 }}
                                 className="p-1.5 hover:bg-neutral-100 text-neutral-500 hover:text-neutral-900 rounded-lg disabled:opacity-30 transition cursor-pointer font-bold"
                                 title="Move Up"
@@ -1690,7 +1690,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                                   updated[idx] = updated[idx + 1];
                                   updated[idx + 1] = temp;
                                   setCarouselItems(updated);
-                                  saveCarousel(updated);
+                                  showToast("Slide moved down. Click 'Save Carousel Layout' to apply changes.", "info");
                                 }}
                                 className="p-1.5 hover:bg-neutral-100 text-neutral-500 hover:text-neutral-900 rounded-lg disabled:opacity-30 transition cursor-pointer font-bold"
                                 title="Move Down"
@@ -1708,7 +1708,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                                 onClick={() => {
                                   const updated = carouselItems.filter(p => p.id !== item.id);
                                   setCarouselItems(updated);
-                                  saveCarousel(updated);
+                                  showToast("Slide removed. Click 'Save Carousel Layout' to apply changes.", "info");
                                 }}
                                 className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition cursor-pointer"
                                 title="Remove slide"
@@ -1775,7 +1775,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                                 };
                                 const updated = [...carouselItems, newSlide];
                                 setCarouselItems(updated);
-                                saveCarousel(updated);
+                                showToast("Catalog item added to layout. Click 'Save Carousel Layout' to apply changes.", "info");
                               }}
                               className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition shrink-0 ${
                                 isAlreadyInCarousel 
@@ -1977,7 +1977,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                           };
                           const updated = [...carouselItems, newSlide];
                           setCarouselItems(updated);
-                          saveCarousel(updated);
+                          showToast("Custom slide added to layout. Click 'Save Carousel Layout' to apply changes.", "info");
                           
                           // Reset fields
                           setNewSlideName("");
@@ -2183,7 +2183,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                     item.id === finalItem.id ? finalItem : item
                   );
                   setCarouselItems(updated);
-                  saveCarousel(updated);
+                  showToast("Slide updated locally. Click 'Save Carousel Layout' to apply changes.", "info");
                   setEditingCarouselItem(null);
                 }}
                 className="p-6 space-y-4 animate-none max-h-[75vh] overflow-y-auto scrollbar-thin"

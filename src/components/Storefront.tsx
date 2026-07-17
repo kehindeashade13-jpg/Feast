@@ -68,7 +68,7 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
 
   // Fetch carousel items on mount
   useEffect(() => {
-    fetch("/api/carousel")
+    fetch(`/api/carousel?t=${Date.now()}`)
       .then(res => res.json())
       .then(data => {
         if (data && data.carousel) {

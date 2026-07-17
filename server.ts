@@ -680,6 +680,7 @@ function writeLocalCarousel(carousel: any[]) {
 
 // GET carousel items
 app.get("/api/carousel", (req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
   const carousel = readLocalCarousel();
   res.json({ carousel });
 });
