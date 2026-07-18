@@ -537,12 +537,6 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
               Menu
             </button>
             <button 
-              onClick={() => setActiveTab("track")}
-              className={`hover:text-amber-400 transition ${activeTab === "track" ? "text-amber-400 font-bold" : "text-neutral-300"}`}
-            >
-              Track Order
-            </button>
-            <button 
               onClick={() => setActiveTab("about")}
               className={`hover:text-amber-400 transition ${activeTab === "about" ? "text-amber-400 font-bold" : "text-neutral-300"}`}
             >
@@ -564,7 +558,7 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
       </header>
 
       {/* MOBILE BOTTOM NAVIGATION */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-neutral-900 border-t border-neutral-800 py-2.5 px-6 flex items-center justify-between text-xs font-semibold">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-neutral-900 border-t border-neutral-800 py-2.5 px-6 flex items-center justify-around text-xs font-semibold">
         <button 
           onClick={() => setActiveTab("home")}
           className={`flex flex-col items-center gap-1 transition ${activeTab === "home" ? "text-amber-400" : "text-neutral-400"}`}
@@ -578,13 +572,6 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
         >
           <ShoppingBag className="w-5 h-5" />
           <span>Menu</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab("track")}
-          className={`flex flex-col items-center gap-1 transition ${activeTab === "track" ? "text-amber-400" : "text-neutral-400"}`}
-        >
-          <MapPin className="w-5 h-5" />
-          <span>Track</span>
         </button>
         <button 
           onClick={() => setActiveTab("about")}
@@ -622,12 +609,6 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
                       className="bg-amber-400 hover:bg-amber-500 text-black font-extrabold px-8 py-4 rounded-2xl transition-all shadow-lg shadow-amber-400/20 cursor-pointer flex items-center justify-center gap-2 group text-sm sm:text-base uppercase tracking-wide border border-amber-300"
                     >
                       Explore Menu <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                    </button>
-                    <button 
-                      onClick={() => setActiveTab("track")}
-                      className="bg-neutral-800 hover:bg-neutral-700 text-amber-400 font-extrabold px-8 py-4 rounded-2xl transition border border-neutral-700 cursor-pointer flex items-center justify-center gap-2 text-sm sm:text-base uppercase tracking-wide"
-                    >
-                      Track Active Order
                     </button>
                   </div>
                   
