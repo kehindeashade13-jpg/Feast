@@ -274,13 +274,11 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const [dbError, setDbError] = useState<string | null>(null);
   const [isFallback, setIsFallback] = useState(false);
-  const [isLocalStaticMode, setIsLocalStaticMode] = useState(
-    !(import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes("placeholder"))
-  );
+  const isLocalStaticMode = false;
   
   // App Config (Supabase status)
   const [config, setConfig] = useState<AppConfig>({
-    isSupabaseConfigured: !!import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes("placeholder"),
+    isSupabaseConfigured: true,
     supabaseUrl: import.meta.env.VITE_SUPABASE_URL || null,
     adminEmail: "admin@example.com"
   });
@@ -296,59 +294,6 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
     category: "Shawarma",
     image_url: ""
   });
-
-  const getLocalSeedProducts = (): Product[] => [
-    {
-      id: "prod-1",
-      name: "Double Grilled Chicken Burger",
-      description: "Juicy double-stacked grilled chicken breast patties, melted cheddar cheese, fresh lettuce, sliced tomatoes, caramelized onions, and our signature burger sauce on a toasted brioche bun.",
-      price: 10500.00,
-      category: "Burger",
-      image_url: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80&w=800",
-      stock: 25,
-      created_at: new Date().toISOString()
-    },
-    {
-      id: "prod-2",
-      name: "Spicy Beef Shawarma Wrap",
-      description: "Premium sliced flank beef slow-roasted and marinated in authentic Middle Eastern spices, wrapped in toasted pita with French fries, pickled cucumbers, cabbage salad, and rich garlic tahini sauce.",
-      price: 8500.00,
-      category: "Shawarma",
-      image_url: "https://images.unsplash.com/photo-1608897013039-887f21d8c804?auto=format&fit=crop&q=80&w=800",
-      stock: 50,
-      created_at: new Date().toISOString()
-    },
-    {
-      id: "prod-3",
-      name: "Authentic Smoked Chicken Suya",
-      description: "Tender boneless chicken thigh pieces seasoned in spicy roasted peanut rub (yaji spice) and smoked over red-hot charcoal, served with fresh sliced red onions, cabbage, and extra yaji.",
-      price: 9000.00,
-      category: "Chicken Suya",
-      image_url: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800",
-      stock: 30,
-      created_at: new Date().toISOString()
-    },
-    {
-      id: "prod-4",
-      name: "Jumbo Chicken Suya Wrap",
-      description: "Toasted flatbread filled with juicy chopped chicken suya, shredded lettuce, tomatoes, sliced onions, and a splash of spicy yaji mayo dressing.",
-      price: 7500.00,
-      category: "Chicken Suya",
-      image_url: "https://images.unsplash.com/photo-1642d8d3f63c800888?auto=format&fit=crop&q=80&w=800",
-      stock: 20,
-      created_at: new Date().toISOString()
-    },
-    {
-      id: "prod-5",
-      name: "Crispy Chicken Burger with Fries",
-      description: "Crispy golden buttermilk fried chicken breast, pickles, spicy coleslaw, and herb mayo in a toasted bun, served with a side of crispy French fries.",
-      price: 11000.00,
-      category: "Burger",
-      image_url: "https://images.unsplash.com/photo-1525059696034-4967a8e1dca2?auto=format&fit=crop&q=80&w=800",
-      stock: 15,
-      created_at: new Date().toISOString()
-    }
-  ];
 
   // Fetch initial data
   const fetchData = async () => {
@@ -366,36 +311,12 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
       }
 
       setProducts(loadedProducts || []);
-      setIsLocalStaticMode(false);
       setIsFallback(false);
     } catch (error: any) {
-      console.warn("Error loading dashboard from Supabase:", error);
-      
-      const hasSupabaseUrl = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes("placeholder");
-      if (hasSupabaseUrl) {
-        setIsLocalStaticMode(false);
-        setIsFallback(true);
-        setDbError(error.message || "Failed to load from live Supabase instance.");
-        setProducts([]);
-      } else {
-        setIsLocalStaticMode(true);
-        setIsFallback(true);
-        setDbError(error.message || "Failed to sync Supabase database.");
-        
-        const localProductsStr = localStorage.getItem("local_products");
-        let loadedProducts: Product[] = [];
-        if (localProductsStr) {
-          try {
-            loadedProducts = JSON.parse(localProductsStr);
-          } catch (e) {
-            loadedProducts = getLocalSeedProducts();
-          }
-        } else {
-          loadedProducts = getLocalSeedProducts();
-          localStorage.setItem("local_products", JSON.stringify(loadedProducts));
-        }
-        setProducts(loadedProducts);
-      }
+      console.error("Error loading dashboard from Supabase:", error);
+      setIsFallback(true);
+      setDbError(error.message || "Failed to load from live Supabase instance.");
+      setProducts([]);
     } finally {
       setLoading(false);
     }

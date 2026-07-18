@@ -398,42 +398,9 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
           window.location.href = waUrl;
         }
       }
-    } catch (err) {
-      console.warn("Supabase order placement failed, falling back to local storage and direct WhatsApp redirection:", err);
-      
-      const offlineOrder = {
-        id: `local-${Date.now()}`,
-        order_number: orderNumber,
-        customer_name: customerName,
-        customer_phone: customerPhone,
-        customer_email: customerEmail,
-        delivery_address: deliveryAddress,
-        delivery_instructions: deliveryInstructions,
-        payment_method: paymentMethod,
-        items: cart.map(item => ({
-          id: item.product.id,
-          name: item.product.name,
-          quantity: item.quantity,
-          price: item.product.price + item.customizations.extraCost,
-          customizations: item.customizations
-        })),
-        total_price: getCartTotal() + deliveryFee,
-        status: "Pending",
-        created_at: new Date().toISOString()
-      };
-
-      // Save client side local order
-      saveLocalOrderToStorage(offlineOrder);
-
-      setPlacedOrder(offlineOrder);
-      saveCart([]); // clear cart
-      setIsCheckoutOpen(false);
-
-      // Auto redirect to WhatsApp
-      const waUrl = getWhatsAppUrl(offlineOrder);
-      if (waUrl) {
-        window.location.href = waUrl;
-      }
+    } catch (err: any) {
+      console.error("Supabase order placement failed:", err);
+      alert(err.message || "Order placement failed. Please verify your connection.");
     } finally {
       setSubmittingOrder(false);
     }
@@ -460,7 +427,7 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
       if (orders && orders.length > 0) {
         setSearchedOrder(orders[0]);
       } else {
-        // Fallback to client-side order storage search
+        // Fallback to client-side order storage search as a helpful user reference
         const localOrders = getLocalOrdersFromStorage();
         const foundLocal = localOrders.find((o: any) => o.order_number === queryStr || o.id === queryStr);
         if (foundLocal) {
@@ -469,14 +436,14 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
           setTrackError("Order not found. Check the order number.");
         }
       }
-    } catch (err) {
-      console.error("Tracking request failed on Supabase, loading local storage:", err);
+    } catch (err: any) {
+      console.error("Tracking request failed on Supabase:", err);
       const localOrders = getLocalOrdersFromStorage();
       const foundLocal = localOrders.find((o: any) => o.order_number === queryStr || o.id === queryStr);
       if (foundLocal) {
         setSearchedOrder(foundLocal);
       } else {
-        setTrackError("Order not found in cloud database or local storage cache.");
+        setTrackError(err.message || "Order tracking failed. Please try again.");
       }
     } finally {
       setSearchingOrder(false);
