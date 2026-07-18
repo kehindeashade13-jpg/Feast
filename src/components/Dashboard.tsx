@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Product, AppConfig } from "../types";
 import { SupabaseHelper } from "./SupabaseHelper";
+import { supabase } from "../supabaseClient";
 
 interface ImagePickerProps {
   value: string;
@@ -352,98 +353,38 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
     setLoading(true);
     setDbError(null);
     try {
-      let isLocalStatic = false;
+      // Load products directly from Supabase
+      const { data: loadedProducts, error: productsError } = await supabase
+        .from("products")
+        .select("*")
+        .order("name", { ascending: true });
 
-      // 1. Fetch Config
-      try {
-        const configRes = await fetch("/api/config");
-        const contentType = configRes.headers.get("content-type") || "";
-        if (configRes.ok && contentType.includes("application/json")) {
-          const configData = await configRes.json();
-          setConfig(configData);
-        } else {
-          isLocalStatic = true;
-        }
-      } catch (err) {
-        isLocalStatic = true;
+      if (productsError) {
+        throw productsError;
       }
 
-      // 2. Fetch Products
+      setProducts(loadedProducts || []);
+      setIsLocalStaticMode(false);
+      setIsFallback(false);
+    } catch (error: any) {
+      console.warn("Error loading dashboard from Supabase, falling back to Local Storage:", error);
+      setIsLocalStaticMode(true);
+      setIsFallback(true);
+      setDbError(error.message || "Failed to sync Supabase database.");
+      
+      const localProductsStr = localStorage.getItem("local_products");
       let loadedProducts: Product[] = [];
-      if (!isLocalStatic) {
+      if (localProductsStr) {
         try {
-          const productsRes = await fetch("/api/products");
-          const contentType = productsRes.headers.get("content-type") || "";
-          if (productsRes.ok && contentType.includes("application/json")) {
-            const productsData = await productsRes.json();
-            loadedProducts = productsData.products || [];
-            
-            // Restore any custom products uploaded/created by the user from localStorage
-            const localProductsStr = localStorage.getItem("local_products");
-            if (localProductsStr) {
-              try {
-                const localProducts: Product[] = JSON.parse(localProductsStr);
-                const customLocalProducts = localProducts.filter(p => p.image_url?.startsWith("data:image/") || !["prod-1", "prod-2", "prod-3", "prod-4", "prod-5"].includes(p.id));
-                if (customLocalProducts.length > 0) {
-                  const merged = [...loadedProducts];
-                  customLocalProducts.forEach(localP => {
-                    if (!merged.some(m => m.name.toLowerCase() === localP.name.toLowerCase() || m.id === localP.id)) {
-                      merged.unshift(localP);
-                      // Sync/persist back to the server
-                      fetch("/api/products", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(localP)
-                      }).catch(err => console.warn("Failed to sync custom product to server:", err));
-                    }
-                  });
-                  loadedProducts = merged;
-                }
-              } catch (e) {
-                // ignore
-              }
-            }
-            
-            if (productsData.isFallback && productsData.error) {
-              setDbError(productsData.error);
-              setIsFallback(true);
-            } else {
-              setIsFallback(false);
-            }
-          } else {
-            isLocalStatic = true;
-          }
-        } catch (err) {
-          isLocalStatic = true;
-        }
-      }
-
-      // If we are running statically (no active JSON backend, e.g. on Vercel)
-      if (isLocalStatic) {
-        setIsLocalStaticMode(true);
-        setIsFallback(true);
-        setDbError("Running in client-side Static Mode. All product changes are saved securely to Local Storage.");
-        
-        const localProductsStr = localStorage.getItem("local_products");
-        if (localProductsStr) {
-          try {
-            loadedProducts = JSON.parse(localProductsStr);
-          } catch (e) {
-            loadedProducts = getLocalSeedProducts();
-          }
-        } else {
+          loadedProducts = JSON.parse(localProductsStr);
+        } catch (e) {
           loadedProducts = getLocalSeedProducts();
-          localStorage.setItem("local_products", JSON.stringify(loadedProducts));
         }
       } else {
-        setIsLocalStaticMode(false);
+        loadedProducts = getLocalSeedProducts();
+        localStorage.setItem("local_products", JSON.stringify(loadedProducts));
       }
-
       setProducts(loadedProducts);
-    } catch (error: any) {
-      console.error("Error loading dashboard data:", error);
-      showToast("Failed to fetch database products.", "error");
-      setDbError(error.message || "Failed to sync databases.");
     } finally {
       setLoading(false);
     }
@@ -452,10 +393,11 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
   const fetchCarousel = async () => {
     setLoadingCarousel(true);
     try {
-      const res = await fetch(`/api/carousel/draft?t=${Date.now()}`);
-      const data = await res.json();
-      if (data && data.carousel) {
-        setCarouselItems(data.carousel);
+      const localCarousel = localStorage.getItem("local_carousel");
+      if (localCarousel) {
+        setCarouselItems(JSON.parse(localCarousel));
+      } else {
+        setCarouselItems([]);
       }
     } catch (err) {
       console.error("Error fetching carousel:", err);
@@ -466,11 +408,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
 
   const saveCarouselDraft = async (items: any[]) => {
     try {
-      await fetch("/api/carousel/draft", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ carousel: items })
-      });
+      localStorage.setItem("local_carousel_draft", JSON.stringify(items));
     } catch (err) {
       console.error("Error auto-saving draft:", err);
     }
@@ -478,18 +416,9 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
 
   const saveCarousel = async (items: any[]) => {
     try {
-      const res = await fetch("/api/carousel", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ carousel: items })
-      });
-      const data = await res.json();
-      if (data && data.success) {
-        setCarouselItems(data.carousel);
-        showToast("Hero Carousel saved successfully!", "success");
-      } else {
-        showToast("Failed to save carousel configuration.", "error");
-      }
+      localStorage.setItem("local_carousel", JSON.stringify(items));
+      setCarouselItems(items);
+      showToast("Hero Carousel saved successfully!", "success");
     } catch (err) {
       console.error("Error saving carousel:", err);
       showToast("Error updating carousel configuration.", "error");
@@ -504,21 +433,23 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
   const fetchOrders = async () => {
     setLoadingOrders(true);
     try {
-      const res = await fetch("/api/orders");
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
+      if (isLocalStaticMode) {
+        const localBackup = localStorage.getItem("local_orders_backup") || "[]";
+        setOrders(JSON.parse(localBackup));
+        return;
       }
-      const data = await res.json();
-      if (data && data.success) {
-        setOrders(data.orders || []);
-        // Cache a local copy of the orders for offline/fallback resilience
-        localStorage.setItem("local_orders_backup", JSON.stringify(data.orders || []));
-      } else {
-        throw new Error(data?.error || "Server returned success: false");
-      }
+
+      const { data, error } = await supabase
+        .from("orders")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setOrders(data || []);
+      localStorage.setItem("local_orders_backup", JSON.stringify(data || []));
     } catch (err: any) {
-      // Quiet warning instead of a noisy console.error to keep logs clean and prevent testing alerts
-      console.warn("Express API orders fetch failed, using local browser fallback:", err.message || err);
+      console.warn("Supabase orders fetch failed, using local browser fallback:", err.message || err);
       
       const backupStr = localStorage.getItem("local_orders_backup") || localStorage.getItem("local_orders");
       if (backupStr) {
@@ -581,24 +512,21 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
         return;
       }
 
-      const res = await fetch(`/api/orders/${orderId}/status`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus })
+      const { error } = await supabase
+        .from("orders")
+        .update({ status: newStatus })
+        .eq("id", orderId);
+
+      if (error) throw error;
+
+      showToast(`Order status updated to ${newStatus}!`, "success");
+      setOrders(prev => {
+        const updated = prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o);
+        localStorage.setItem("local_orders_backup", JSON.stringify(updated));
+        return updated;
       });
-      const data = await res.json();
-      if (data.success) {
-        showToast(`Order status updated to ${newStatus}!`, "success");
-        setOrders(prev => {
-          const updated = prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o);
-          localStorage.setItem("local_orders_backup", JSON.stringify(updated));
-          return updated;
-        });
-      } else {
-        showToast(data.error || "Failed to update status", "error");
-      }
     } catch (err: any) {
-      console.warn("Failed to update order status on server, falling back to local storage:", err.message || err);
+      console.warn("Failed to update order status on Supabase, falling back to local storage:", err.message || err);
       const backupStr = localStorage.getItem("local_orders_backup") || localStorage.getItem("local_orders") || "[]";
       let localOrders = [];
       try {
@@ -627,22 +555,21 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
         return;
       }
 
-      const res = await fetch(`/api/orders/${orderId}`, {
-        method: "DELETE"
+      const { error } = await supabase
+        .from("orders")
+        .delete()
+        .eq("id", orderId);
+
+      if (error) throw error;
+
+      showToast("Order record deleted.", "success");
+      setOrders(prev => {
+        const filtered = prev.filter(o => o.id !== orderId);
+        localStorage.setItem("local_orders_backup", JSON.stringify(filtered));
+        return filtered;
       });
-      const data = await res.json();
-      if (data.success) {
-        showToast("Order record deleted.", "success");
-        setOrders(prev => {
-          const filtered = prev.filter(o => o.id !== orderId);
-          localStorage.setItem("local_orders_backup", JSON.stringify(filtered));
-          return filtered;
-        });
-      } else {
-        showToast(data.error || "Failed to delete order", "error");
-      }
     } catch (err: any) {
-      console.warn("Failed to delete order on server, falling back to local storage:", err.message || err);
+      console.warn("Failed to delete order on Supabase, falling back to local storage:", err.message || err);
       const backupStr = localStorage.getItem("local_orders_backup") || localStorage.getItem("local_orders") || "[]";
       let localOrders = [];
       try {
@@ -747,32 +674,26 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
     }
 
     try {
-      const response = await fetch("/api/products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const { data, error } = await supabase
+        .from("products")
+        .insert([{
           name: formData.name,
           description: formData.description,
           price: parsePrice(formData.price),
           stock: Number(formData.stock) || 0,
           category: formData.category,
-          image_url: formData.image_url
-        })
-      });
+          image_url: formData.image_url || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800"
+        }])
+        .select()
+        .single();
 
-      const contentType = response.headers.get("content-type") || "";
-      if (contentType.includes("application/json")) {
-        const data = await response.json();
-        if (response.ok && data.success) {
-          setProducts(prev => [data.product, ...prev]);
-          showToast(`Product "${formData.name}" added successfully!`, "success");
-          resetForm();
-          setActiveTab("catalog"); // switch back to catalog
-        } else {
-          throw new Error(data.error || `Failed to add product (Status ${response.status}).`);
-        }
-      } else {
-        throw new Error(`Server returned non-JSON response (Status ${response.status}).`);
+      if (error) throw error;
+
+      if (data) {
+        setProducts(prev => [data, ...prev]);
+        showToast(`Product "${formData.name}" added successfully!`, "success");
+        resetForm();
+        setActiveTab("catalog"); // switch back to catalog
       }
     } catch (error: any) {
       showToast(error.message, "error");
@@ -807,10 +728,9 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
     }
 
     try {
-      const response = await fetch(`/api/products/${editingProduct.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const { data, error } = await supabase
+        .from("products")
+        .update({
           name: formData.name,
           description: formData.description,
           price: parsePrice(formData.price),
@@ -818,20 +738,16 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
           category: formData.category,
           image_url: formData.image_url
         })
-      });
+        .eq("id", editingProduct.id)
+        .select()
+        .single();
 
-      const contentType = response.headers.get("content-type") || "";
-      if (contentType.includes("application/json")) {
-        const data = await response.json();
-        if (response.ok && data.success) {
-          setProducts(prev => prev.map(p => p.id === editingProduct.id ? data.product : p));
-          showToast(`Product updated successfully!`, "success");
-          handleCloseEdit();
-        } else {
-          throw new Error(data.error || `Failed to update product (Status ${response.status}).`);
-        }
-      } else {
-        throw new Error(`Server returned non-JSON response (Status ${response.status}).`);
+      if (error) throw error;
+
+      if (data) {
+        setProducts(prev => prev.map(p => p.id === editingProduct.id ? data : p));
+        showToast(`Product updated successfully!`, "success");
+        handleCloseEdit();
       }
     } catch (error: any) {
       showToast(error.message, "error");
@@ -853,22 +769,15 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
     }
 
     try {
-      const response = await fetch(`/api/products/${id}`, {
-        method: "DELETE"
-      });
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", id);
 
-      const contentType = response.headers.get("content-type") || "";
-      if (contentType.includes("application/json")) {
-        const data = await response.json();
-        if (response.ok && data.success) {
-          setProducts(prev => prev.filter(p => p.id !== id));
-          showToast(`Product "${name}" deleted successfully!`, "info");
-        } else {
-          throw new Error(data.error || `Failed to delete product (Status ${response.status}).`);
-        }
-      } else {
-        throw new Error(`Server returned non-JSON response (Status ${response.status}).`);
-      }
+      if (error) throw error;
+
+      setProducts(prev => prev.filter(p => p.id !== id));
+      showToast(`Product "${name}" deleted successfully!`, "info");
     } catch (error: any) {
       showToast(error.message, "error");
     }

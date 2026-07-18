@@ -3,6 +3,7 @@ import { Login } from "./components/Login";
 import { Dashboard } from "./components/Dashboard";
 import { Storefront } from "./components/Storefront";
 import { Product, AppConfig } from "./types";
+import { supabase } from "./supabaseClient";
 
 export default function App() {
   const [authToken, setAuthToken] = useState<string | null>(null);
@@ -11,60 +12,71 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
   const [config, setConfig] = useState<AppConfig>({
-    isSupabaseConfigured: false,
-    supabaseUrl: null,
+    isSupabaseConfigured: !!import.meta.env.VITE_SUPABASE_URL,
+    supabaseUrl: import.meta.env.VITE_SUPABASE_URL || null,
     adminEmail: "example@gmail.com"
   });
 
-  // Fetch products for storefront catalog
+  // Fetch products for storefront catalog directly from Supabase
   const fetchProducts = async () => {
     setLoadingProducts(true);
     try {
-      const res = await fetch("/api/products");
-      const data = await res.json();
-      if (data && data.products) {
-        setProducts(data.products);
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      if (data) {
+        setProducts(data);
       }
     } catch (err) {
-      console.error("Error fetching products:", err);
+      console.warn("Error fetching products from Supabase, loading from localStorage fallback:", err);
+      const localProductsStr = localStorage.getItem("local_products");
+      if (localProductsStr) {
+        try {
+          setProducts(JSON.parse(localProductsStr));
+        } catch (e) {
+          console.error("Failed to parse local products from localStorage:", e);
+        }
+      }
     } finally {
       setLoadingProducts(false);
     }
   };
 
-  // Check for persistent session on load
+  // Check for persistent session on load and listen to changes
   useEffect(() => {
-    const savedToken = localStorage.getItem("admin_auth_token");
-    const savedEmail = localStorage.getItem("admin_user_email");
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setAuthToken(session.access_token);
+        setUserEmail(session.user?.email || "");
+      }
+    });
 
-    if (savedToken && savedEmail) {
-      setAuthToken(savedToken);
-      setUserEmail(savedEmail);
-    }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        setAuthToken(session.access_token);
+        setUserEmail(session.user?.email || "");
+      } else {
+        setAuthToken(null);
+        setUserEmail("");
+      }
+    });
 
     fetchProducts();
 
-    // Load server-side configurations
-    fetch("/api/config")
-      .then((res) => res.json())
-      .then((data) => {
-        setConfig(data);
-      })
-      .catch((err) => console.error("Error loading backend config:", err));
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleLoginSuccess = (token: string, email: string) => {
-    localStorage.setItem("admin_auth_token", token);
-    localStorage.setItem("admin_user_email", email);
     setAuthToken(token);
     setUserEmail(email);
     setViewingAdmin(true);
     fetchProducts(); // Refresh products on login
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("admin_auth_token");
-    localStorage.removeItem("admin_user_email");
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setAuthToken(null);
     setUserEmail("");
     setViewingAdmin(false);

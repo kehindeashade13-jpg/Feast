@@ -6,6 +6,7 @@ import {
   TrendingUp, Award, Flame, ExternalLink, Calendar, MessageCircle
 } from "lucide-react";
 import { Product } from "../types";
+import { supabase } from "../supabaseClient";
 // @ts-ignore
 import logoImg from "../assets/images/chicken_feast_logo_1784248908926.jpg";
 
@@ -109,28 +110,27 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
         setTrackError("");
         setSearchedOrder(null);
         try {
-          const res = await fetch(`/api/orders/track?number=${encodeURIComponent(code.trim())}`);
-          if (!res.ok) {
-            throw new Error(`Server status: ${res.status}`);
-          }
-          const contentType = res.headers.get("content-type");
-          if (!contentType || !contentType.includes("application/json")) {
-            throw new Error("Response is not JSON.");
-          }
-          const data = await res.json();
-          if (data.success && data.order) {
-            setSearchedOrder(data.order);
+          // Direct query to Supabase orders table
+          const { data: orders, error } = await supabase
+            .from("orders")
+            .select("*")
+            .or(`order_number.eq.${code.trim()},id.eq.${code.trim()}`);
+
+          if (error) throw error;
+
+          if (orders && orders.length > 0) {
+            setSearchedOrder(orders[0]);
           } else {
             const localOrders = getLocalOrdersFromStorage();
             const foundLocal = localOrders.find((o: any) => o.order_number === code.trim() || o.id === code.trim());
             if (foundLocal) {
               setSearchedOrder(foundLocal);
             } else {
-              setTrackError(data.error || "Order not found. Please verify the code.");
+              setTrackError("Order not found. Please verify the code.");
             }
           }
         } catch (err) {
-          console.warn("API tracking failed on mount, loading from local storage:", err);
+          console.warn("Supabase tracking failed on mount, loading from local storage:", err);
           const localOrders = getLocalOrdersFromStorage();
           const foundLocal = localOrders.find((o: any) => o.order_number === code.trim() || o.id === code.trim());
           if (foundLocal) {
@@ -153,14 +153,14 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
 
   // Fetch carousel items on mount
   useEffect(() => {
-    fetch(`/api/carousel?t=${Date.now()}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.carousel) {
-          setCarouselItems(data.carousel);
-        }
-      })
-      .catch(err => console.error("Error fetching carousel:", err));
+    try {
+      const localCarousel = localStorage.getItem("local_carousel");
+      if (localCarousel) {
+        setCarouselItems(JSON.parse(localCarousel));
+      }
+    } catch (err) {
+      console.error("Error loading carousel from local storage:", err);
+    }
   }, []);
 
   const defaultCarouselItems = [
@@ -357,7 +357,9 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
 
     setSubmittingOrder(true);
 
+    const orderNumber = `CF-${Math.floor(100000 + Math.random() * 900000)}`;
     const orderPayload = {
+      order_number: orderNumber,
       customer_name: customerName,
       customer_phone: customerPhone,
       customer_email: customerEmail,
@@ -371,47 +373,37 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
         price: item.product.price + item.customizations.extraCost,
         customizations: item.customizations
       })),
-      total_price: getCartTotal() + deliveryFee
+      total_price: getCartTotal() + deliveryFee,
+      status: "Pending"
     };
 
     try {
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderPayload)
-      });
-      
-      if (!res.ok) {
-        throw new Error(`Server status: ${res.status}`);
-      }
+      const { data, error } = await supabase
+        .from("orders")
+        .insert([orderPayload])
+        .select()
+        .single();
 
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Expected JSON response but received another content type. SPA routing fallback.");
-      }
+      if (error) throw error;
 
-      const data = await res.json();
-      if (data && data.success) {
-        setPlacedOrder(data.order);
-        saveLocalOrderToStorage(data.order);
+      if (data) {
+        setPlacedOrder(data);
+        saveLocalOrderToStorage(data);
         saveCart([]); // clear cart
         setIsCheckoutOpen(false);
 
         // Auto redirect to WhatsApp
-        const waUrl = getWhatsAppUrl(data.order);
+        const waUrl = getWhatsAppUrl(data);
         if (waUrl) {
           window.location.href = waUrl;
         }
-      } else {
-        throw new Error(data?.error || "Failed to submit order.");
       }
     } catch (err) {
-      console.warn("API order placement failed, falling back to local storage and direct WhatsApp redirection:", err);
+      console.warn("Supabase order placement failed, falling back to local storage and direct WhatsApp redirection:", err);
       
-      const localOrderNum = `CF-${Math.floor(100000 + Math.random() * 900000)}`;
       const offlineOrder = {
         id: `local-${Date.now()}`,
-        order_number: localOrderNum,
+        order_number: orderNumber,
         customer_name: customerName,
         customer_phone: customerPhone,
         customer_email: customerEmail,
@@ -458,19 +450,15 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
     setSearchedOrder(null);
 
     try {
-      const res = await fetch(`/api/orders/track?number=${encodeURIComponent(queryStr)}`);
-      if (!res.ok) {
-        throw new Error(`Server returned status ${res.status}`);
-      }
+      const { data: orders, error } = await supabase
+        .from("orders")
+        .select("*")
+        .or(`order_number.eq.${queryStr},id.eq.${queryStr}`);
 
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Response is not JSON. SPA fallback routing active.");
-      }
+      if (error) throw error;
 
-      const data = await res.json();
-      if (data.success && data.order) {
-        setSearchedOrder(data.order);
+      if (orders && orders.length > 0) {
+        setSearchedOrder(orders[0]);
       } else {
         // Fallback to client-side order storage search
         const localOrders = getLocalOrdersFromStorage();
@@ -478,11 +466,11 @@ export function Storefront({ onGoToAdmin, products: initialProducts, loadingProd
         if (foundLocal) {
           setSearchedOrder(foundLocal);
         } else {
-          setTrackError(data.error || "Order not found. Check the order number.");
+          setTrackError("Order not found. Check the order number.");
         }
       }
     } catch (err) {
-      console.error("Tracking request failed, loading local storage:", err);
+      console.error("Tracking request failed on Supabase, loading local storage:", err);
       const localOrders = getLocalOrdersFromStorage();
       const foundLocal = localOrders.find((o: any) => o.order_number === queryStr || o.id === queryStr);
       if (foundLocal) {

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "motion/react";
-import { ShieldCheck, Lock, Mail, AlertCircle, Sparkles, LogIn, Eye, EyeOff } from "lucide-react";
+import { ShieldCheck, Lock, Mail, AlertCircle, Sparkles, LogIn, Eye, EyeOff, UserPlus } from "lucide-react";
+import { supabase } from "../supabaseClient";
 
 interface LoginProps {
   onLoginSuccess: (token: string, email: string) => void;
@@ -10,6 +11,7 @@ interface LoginProps {
 export function Login({ onLoginSuccess, adminEmailDefault }: LoginProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,41 +27,32 @@ export function Login({ onLoginSuccess, adminEmailDefault }: LoginProps) {
     setError(null);
 
     try {
-      let data: any = null;
-      let fetchErrorOccurred = false;
-      let fetchErrorMessage = "";
-
-      try {
-        const response = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, password }),
+      if (isSignUp) {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
         });
-
-        const contentType = response.headers.get("content-type") || "";
-        if (contentType.includes("application/json")) {
-          data = await response.json();
+        if (signUpError) throw signUpError;
+        
+        // Supabase returns a user. Depending on setup, they might need to confirm email,
+        // or they might be logged in instantly.
+        if (data.session) {
+          onLoginSuccess(data.session.access_token, data.user?.email || email);
         } else {
-          const responseText = await response.text();
-          throw new Error(`Server returned non-JSON response (Status ${response.status}): ${responseText.slice(0, 100)}`);
+          alert("Registration successful! If required, please verify your email or sign in below.");
+          setIsSignUp(false);
         }
-      } catch (fetchErr: any) {
-        console.warn("API login fetch failed:", fetchErr);
-        fetchErrorOccurred = true;
-        fetchErrorMessage = fetchErr.message || String(fetchErr);
-      }
-
-      if (data && data.success) {
-        // Successful API authentication
-        onLoginSuccess(data.token, data.user?.email || email);
-      } else if (fetchErrorOccurred) {
-        // If there was a network/connection error to the API, let the user know
-        throw new Error(`Connection to server failed: ${fetchErrorMessage}. Please check if the backend is running.`);
       } else {
-        // API was reached but returned success: false
-        throw new Error(data?.error || "Login failed. Please check your email and password.");
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError) throw signInError;
+        if (data.session) {
+          onLoginSuccess(data.session.access_token, data.user?.email || email);
+        } else {
+          throw new Error("Session could not be established. Please check your credentials.");
+        }
       }
     } catch (err: any) {
       setError(err.message || "Something went wrong.");
@@ -71,6 +64,7 @@ export function Login({ onLoginSuccess, adminEmailDefault }: LoginProps) {
   const handleFillDemo = () => {
     setEmail(adminEmailDefault || "example@gmail.com");
     setPassword("password123");
+    setIsSignUp(false);
     setError(null);
   };
 
@@ -91,13 +85,13 @@ export function Login({ onLoginSuccess, adminEmailDefault }: LoginProps) {
 
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-12 h-12 bg-neutral-900 text-white rounded-xl mb-4 shadow-sm">
-            <ShieldCheck className="w-6 h-6" />
+            {isSignUp ? <UserPlus className="w-6 h-6" /> : <ShieldCheck className="w-6 h-6" />}
           </div>
           <h2 className="text-2xl font-bold tracking-tight text-neutral-900 font-sans">
-            Admin Console
+            {isSignUp ? "Create Staff Account" : "Admin Console"}
           </h2>
           <p className="text-sm text-neutral-500 mt-1">
-            E-commerce Product Management
+            {isSignUp ? "Register for Product Management" : "E-commerce Product Management"}
           </p>
         </div>
 
@@ -178,18 +172,31 @@ export function Login({ onLoginSuccess, adminEmailDefault }: LoginProps) {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                Verifying Credentials...
+                {isSignUp ? "Creating Account..." : "Verifying Credentials..."}
               </span>
             ) : (
               <>
-                <LogIn className="w-4 h-4" />
-                Sign In
+                {isSignUp ? <UserPlus className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
+                {isSignUp ? "Sign Up" : "Sign In"}
               </>
             )}
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-neutral-150 flex flex-col items-center">
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => {
+              setIsSignUp(!isSignUp);
+              setError(null);
+            }}
+            type="button"
+            className="text-xs text-neutral-500 hover:text-neutral-900 font-medium underline transition"
+          >
+            {isSignUp ? "Already have a staff account? Sign In" : "Need a staff account? Create Account"}
+          </button>
+        </div>
+
+        <div className="mt-6 pt-6 border-t border-neutral-150 flex flex-col items-center">
           <p className="text-xs text-neutral-400 mb-3 text-center">
             Trying it out? Fill standard demo credentials in one click:
           </p>
