@@ -47,10 +47,10 @@ values
 
 -- 4. Enable Row Level Security (RLS) & establish explicit policies for products
 alter table public.products enable row level security;
-create policy "Allow public select" on public.products for select using (true);
-create policy "Allow public insert" on public.products for insert with check (true);
-create policy "Allow public update" on public.products for update using (true) with check (true);
-create policy "Allow public delete" on public.products for delete using (true);
+create policy "Allow everyone to read products" on public.products for select using (true);
+create policy "Allow admin to insert products" on public.products for insert to authenticated with check (auth.jwt() ->> 'email' = 'kehindeashade13@gmail.com');
+create policy "Allow admin to update products" on public.products for update to authenticated using (auth.jwt() ->> 'email' = 'kehindeashade13@gmail.com') with check (auth.jwt() ->> 'email' = 'kehindeashade13@gmail.com');
+create policy "Allow admin to delete products" on public.products for delete to authenticated using (auth.jwt() ->> 'email' = 'kehindeashade13@gmail.com');
 
 -- 5. Enable Row Level Security (RLS) & establish explicit policies for orders
 alter table public.orders enable row level security;
