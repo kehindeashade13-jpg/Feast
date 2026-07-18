@@ -274,12 +274,14 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const [dbError, setDbError] = useState<string | null>(null);
   const [isFallback, setIsFallback] = useState(false);
-  const [isLocalStaticMode, setIsLocalStaticMode] = useState(false);
+  const [isLocalStaticMode, setIsLocalStaticMode] = useState(
+    !(import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes("placeholder"))
+  );
   
   // App Config (Supabase status)
   const [config, setConfig] = useState<AppConfig>({
-    isSupabaseConfigured: false,
-    supabaseUrl: null,
+    isSupabaseConfigured: !!import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes("placeholder"),
+    supabaseUrl: import.meta.env.VITE_SUPABASE_URL || null,
     adminEmail: "admin@example.com"
   });
 
@@ -367,24 +369,33 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
       setIsLocalStaticMode(false);
       setIsFallback(false);
     } catch (error: any) {
-      console.warn("Error loading dashboard from Supabase, falling back to Local Storage:", error);
-      setIsLocalStaticMode(true);
-      setIsFallback(true);
-      setDbError(error.message || "Failed to sync Supabase database.");
+      console.warn("Error loading dashboard from Supabase:", error);
       
-      const localProductsStr = localStorage.getItem("local_products");
-      let loadedProducts: Product[] = [];
-      if (localProductsStr) {
-        try {
-          loadedProducts = JSON.parse(localProductsStr);
-        } catch (e) {
-          loadedProducts = getLocalSeedProducts();
-        }
+      const hasSupabaseUrl = import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes("placeholder");
+      if (hasSupabaseUrl) {
+        setIsLocalStaticMode(false);
+        setIsFallback(true);
+        setDbError(error.message || "Failed to load from live Supabase instance.");
+        setProducts([]);
       } else {
-        loadedProducts = getLocalSeedProducts();
-        localStorage.setItem("local_products", JSON.stringify(loadedProducts));
+        setIsLocalStaticMode(true);
+        setIsFallback(true);
+        setDbError(error.message || "Failed to sync Supabase database.");
+        
+        const localProductsStr = localStorage.getItem("local_products");
+        let loadedProducts: Product[] = [];
+        if (localProductsStr) {
+          try {
+            loadedProducts = JSON.parse(localProductsStr);
+          } catch (e) {
+            loadedProducts = getLocalSeedProducts();
+          }
+        } else {
+          loadedProducts = getLocalSeedProducts();
+          localStorage.setItem("local_products", JSON.stringify(loadedProducts));
+        }
+        setProducts(loadedProducts);
       }
-      setProducts(loadedProducts);
     } finally {
       setLoading(false);
     }
